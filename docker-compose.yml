@@ -1,0 +1,29 @@
+services:
+  model2vec:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - MODEL_NAME=${MODEL_NAME:-minishlab/potion-base-8M}
+    image: model2vec-rs:latest
+    container_name: model2vec-rs
+    environment:
+      - MODEL_NAME=${MODEL_NAME:-minishlab/potion-base-8M}
+      - ALIAS_MODEL_NAME=${ALIAS_MODEL_NAME:-}
+      - PORT=${PORT:-8080}
+      - AUTHENTICATION_ALLOWED_TOKENS=${AUTHENTICATION_ALLOWED_TOKENS:-}
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/.well-known/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true

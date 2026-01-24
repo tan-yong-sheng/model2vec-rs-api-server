@@ -1,0 +1,45 @@
+[package]
+name = "model2vec-api"
+version = "0.1.0"
+edition = "2021"
+description = "OpenAI-compatible Model2Vec embedding API server in Rust"
+
+[dependencies]
+# Web framework - Axum
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = ["auth"] }
+
+# Model inference - model2vec-rs (latest version)
+model2vec-rs = "0.1.4"
+
+# Caching - moka provides TTLCache equivalent
+moka = { version = "0.12", features = ["future"] }
+
+# Configuration
+dotenvy = "0.15"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Validation
+validator = { version = "0.20.0", features = ["derive"] }
+
+# Async utilities
+async-trait = "0.1"
+futures = "0.3"
+
+# Base64 encoding
+base64 = "0.22"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Anyhow for error handling
+anyhow = "1.0"
+
+[profile.release]
+lto = true
+opt-level = 3
+codegen-units = 1

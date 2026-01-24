@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill",
+      "Bash",
+      "WebSearch",
+      "WebFetch",
+      "Read",
+      "Edit",
+      "Write",
+      "Update",
+      "mcp__chrome-devtools",
+      "mcp__ai-vision-mcp",
+      "mcp__plugin:context7:context7",
+      "mcp__web-search-scrape",
+      "mcp__deepwiki"
+    ]
+  },
+  "enabledPlugins": {}
+}

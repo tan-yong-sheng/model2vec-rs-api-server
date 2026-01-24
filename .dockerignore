@@ -1,0 +1,41 @@
+# Git
+.git
+.gitignore
+
+# Build artifacts
+target/
+# Cargo.lock  # Keep for reproducible builds
+
+# IDE
+.vscode/
+.idea/
+*.rs.bk
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+.venv/
+venv/
+env/
+*.egg-info/
+__pycache__/
+
+# Docker
+.dockerignore
+Dockerfile
+
+# Models (should be downloaded separately)
+models/
+
+# Test files
+*.test
+tests/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.swp
