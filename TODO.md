@@ -83,3 +83,58 @@ The server is running locally at http://localhost:8080 with:
 
 - Rust model2vec-rs is 1.7x faster than Python version
 - Memory usage significantly lower than Python implementation (~150-250MB vs ~1.2GB)
+
+---
+
+# Docker Hub Publishing via GitHub Actions
+
+## Phase 1: Docker Hub Setup
+
+- [ ] Create Docker Hub account (if not exists)
+- [ ] Create repository on Docker Hub: `model2vec-rs-api-server`
+- [ ] Generate Docker Hub access token
+- [ ] Add `DOCKERHUB_USERNAME` secret to GitHub repository
+- [ ] Add `DOCKERHUB_TOKEN` secret to GitHub repository
+
+## Phase 2: GitHub Actions Workflow
+
+- [ ] Create `.github/workflows/docker-publish.yml`
+- [ ] Test workflow on push to main branch
+- [ ] Test workflow on tag push (v*)
+- [ ] Verify image published to Docker Hub
+- [ ] Verify GitHub Actions cache is working
+
+## Phase 3: Testing & Verification
+
+- [ ] Pull published image from Docker Hub
+- [ ] Run container locally
+- [ ] Verify health endpoints work
+- [ ] Verify embeddings API works with curl
+- [ ] Test with custom model via environment variable
+- [ ] Test with authentication token
+
+## Phase 4: Security Scanning (Optional)
+
+- [ ] Add Trivy vulnerability scanning to workflow
+- [ ] Configure SARIF upload to GitHub Security
+- [ ] Set up severity thresholds
+
+## Phase 5: Multi-Architecture Support (Optional)
+
+- [ ] Set up QEMU for cross-platform builds
+- [ ] Add platforms: linux/amd64, linux/arm64
+- [ ] Test multi-architecture image on both platforms
+
+## Verification Commands
+
+```bash
+# Pull and test
+docker pull docker.io/{DOCKERHUB_USERNAME}/model2vec-rs-api-server:latest
+docker run -p 8080:8080 docker.io/{DOCKERHUB_USERNAME}/model2vec-rs-api-server:latest
+
+# Test endpoints
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/.well-known/ready
+curl -X POST http://localhost:8080/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -d '{"input": "hello world", "model": "minishlab/potion-base-8M"}'
+```

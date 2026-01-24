@@ -47,6 +47,73 @@
 - `assets/deploy-workflow.yml` - Deployment workflow template
 - `assets/matrix-build.yml` - Matrix build template
 
+**GitHub Actions Workflow Template for Docker Hub:**
+```yaml
+# .github/workflows/docker-publish.yml
+name: Build and Push to Docker Hub
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+```
+
+## Related Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [README.md](README.md) | Project overview, quick start, API documentation |
+| [DEPLOY.md](DEPLOY.md) | Full deployment guide (local, Docker, production) |
+| [PLAN.md](PLAN.md) | Detailed implementation plan with phases |
+| [TODO.md](TODO.md) | Task tracking with completion status |
+
 ## Tech Stack
 
 | Component | Technology | Version |

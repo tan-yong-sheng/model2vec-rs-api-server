@@ -123,3 +123,201 @@ model2vec-rs-api-server/
 - **Throughput**: 8000+ samples/second (vs 4650 Python)
 - **Latency**: <10ms per embedding request
 - **Startup Time**: <5 seconds
+
+---
+
+# Docker Hub Publishing via GitHub Actions
+
+## Overview
+
+Set up automated Docker image builds and publishing to Docker Hub using GitHub Actions workflows.
+
+## Prerequisites
+
+1. **Docker Hub Account**: Create account at https://hub.docker.com
+2. **Docker Hub Access Token**: Generate at https://hub.docker.com/settings/security
+3. **GitHub Repository**: Push code to GitHub
+
+## Required Secrets (GitHub Repository Settings)
+
+| Secret Name | Value | Description |
+|-------------|-------|-------------|
+| `DOCKERHUB_USERNAME` | Your Docker Hub username | For image tagging |
+| `DOCKERHUB_TOKEN` | Docker Hub access token | For authentication |
+
+## Setting Up GitHub Secrets
+
+1. Go to repository Settings → Secrets and variables → Actions
+2. Add `DOCKERHUB_USERNAME` (your Docker Hub username)
+3. Add `DOCKERHUB_TOKEN` (access token from Docker Hub)
+
+## Workflow File
+
+Create `.github/workflows/docker-publish.yml`:
+
+```yaml
+name: Build and Push to Docker Hub
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Show image digest
+        run: echo ${{ steps.build.outputs.digest }}
+```
+
+## Image Naming Convention
+
+| Trigger | Image Tag | Example |
+|---------|-----------|---------|
+| Push to main | `latest`, `main-{sha}` | `docker.io/user/model2vec-rs-api-server:latest` |
+| Tag v1.0.0 | `1.0.0`, `1.0`, `1` | `docker.io/user/model2vec-rs-api-server:1.0.0` |
+| PR | `{pr-number}-{sha}` | `docker.io/user/model2vec-rs-api-server:42-abc123` |
+
+## Pull Commands
+
+After successful publish:
+
+```bash
+# Latest version
+docker pull docker.io/{DOCKERHUB_USERNAME}/model2vec-rs-api-server:latest
+
+# Specific version
+docker pull docker.io/{DOCKERHUB_USERNAME}/model2vec-rs-api-server:1.0.0
+```
+
+## Running the Image
+
+```bash
+# Basic
+docker run -p 8080:8080 docker.io/{DOCKERHUB_USERNAME}/model2vec-rs-api-server:latest
+
+# With custom model
+docker run -p 8080:8080 \
+  -e MODEL_NAME=minishlab/potion-base-8M \
+  docker.io/{DOCKERHUB_USERNAME}/model2vec-rs-api-server:latest
+
+# With authentication
+docker run -p 8080:8080 \
+  -e AUTHENTICATION_ALLOWED_TOKENS=my-secret-token \
+  docker.io/{DOCKERHUB_USERNAME}/model2vec-rs-api-server:latest
+```
+
+## Implementation Tasks
+
+### Phase 1: Docker Hub Setup
+
+1. Create Docker Hub account (if not exists)
+2. Create repository on Docker Hub: `model2vec-rs-api-server`
+3. Generate Docker Hub access token
+4. Add secrets to GitHub repository
+
+### Phase 2: GitHub Actions Workflow
+
+1. Create `.github/workflows/docker-publish.yml`
+2. Test workflow on push to main
+3. Test workflow on tag push (v*)
+4. Verify image published to Docker Hub
+
+### Phase 3: Testing & Verification
+
+1. Pull published image
+2. Run container locally
+3. Verify API endpoints work
+4. Test with curl requests
+
+### Phase 4: Security Scanning (Optional)
+
+Add Trivy security scanning:
+
+```yaml
+- name: Run Trivy vulnerability scanner
+  uses: aquasecurity/trivy-action@master
+  with:
+    image-ref: ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+    format: 'sarif'
+    output: 'trivy-results.sarif'
+
+- name: Upload Trivy results
+  uses: github/codeql-action/upload-sarif@v2
+  with:
+    sarif_file: 'trivy-results.sarif'
+```
+
+## Multi-Architecture Builds (Optional)
+
+For ARM64/AMD64 support:
+
+```yaml
+- name: Set up QEMU
+  uses: docker/setup-qemu-action@v3
+
+- name: Set up Docker Buildx
+  uses: docker/setup-buildx-action@v3
+
+- name: Build and push
+  uses: docker/build-push-action@v5
+  with:
+    context: .
+    push: ${{ github.event_name != 'pull_request' }}
+    platforms: linux/amd64,linux/arm64
+    tags: ${{ steps.meta.outputs.tags }}
+    labels: ${{ steps.meta.outputs.labels }}
+```
+
+## Resources
+
+- **GitHub Actions Documentation**: https://docs.github.com/en/actions
+- **Docker Buildx**: https://docs.docker.com/build/buildx/
+- **Docker Hub API**: https://docs.docker.com/docker-hub/api/latest/
+- **AGENTS.md**: See CI/CD skills section for workflow patterns
+- **TODO.md**: Track implementation progress
