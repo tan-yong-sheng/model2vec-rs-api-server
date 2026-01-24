@@ -12,12 +12,12 @@ Note: On cold start, the server may take ~3–5 minutes while the model is downl
 
 ## Why Rust?
 
-| Implementation | Throughput | Memory Usage |
-|----------------|------------|--------------|
-| **Rust (model2vec-rs)** | **8,000 samples/sec** | ~50-100 MB |
-| Python (model2vec) | 4,650 samples/sec | ~1.2 GB |
+| Implementation | Throughput | 
+|----------------|------------|
+| **Rust (model2vec-rs)** | **8,000 samples/sec** |
+| Python (model2vec) | 4,650 samples/sec |
 
-The Rust implementation is **1.7x faster** with **~80% less memory**.
+The Rust implementation is **1.7x faster**.
 
 ## Quick Start
 
@@ -150,7 +150,6 @@ model2vec-rs-api-server/
 ## Performance
 
 - **Throughput**: ~8,000 samples/second (single-threaded CPU)
-- **Memory Usage**: ~50-100 MB
 
 ## Resources
 

@@ -67,7 +67,6 @@
 
 - [x] Rust server builds successfully
 - [x] All API endpoints work correctly
-- [ ] Memory usage < 400MB (to be measured)
 - [ ] docker-compose up -d --build works (Docker build partially tested)
 - [x] curl requests return valid embeddings
 
@@ -82,7 +81,6 @@ The server is running locally at http://localhost:8080 with:
 ## Performance Notes
 
 - Rust model2vec-rs is 1.7x faster than Python version
-- Memory usage significantly lower than Python implementation (~150-250MB vs ~1.2GB)
 
 ---
 

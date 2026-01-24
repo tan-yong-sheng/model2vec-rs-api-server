@@ -2,7 +2,7 @@
 
 ## Overview
 
-Convert the Python model2vec embedding API server to Rust using the official `model2vec-rs` crate for significant performance and memory improvements.
+Convert the Python model2vec embedding API server to Rust using the official `model2vec-rs` crate for significant performance.
 
 ## Tech Stack
 
@@ -107,16 +107,6 @@ model2vec-rs-api-server/
 | `ALIAS_MODEL_NAME` | No | None | Optional model alias |
 | `AUTHENTICATION_ALLOWED_TOKENS` | No | (none) | Comma-separated bearer tokens |
 | `PORT` | No | 8080 | HTTP server port |
-
-## Expected Memory Savings
-
-| Component | Python | Rust | Reduction |
-|-----------|--------|------|-----------|
-| Interpreter/Binary | 100-150 MB | 5-15 MB | ~90% |
-| Web Framework | 50-100 MB | 10-20 MB | ~80% |
-| Model Loading | 800+ MB | 30-60 MB | ~95% |
-| Caching | 50-100 MB | 50-100 MB | ~0% |
-| **Total** | **~1.2 GB** | **~150-250 MB** | **~80%** |
 
 ## Performance Target
 

@@ -136,12 +136,12 @@ All models are loaded directly from [HuggingFace Hub](https://huggingface.co/col
 
 ### Performance Comparison (Single-threaded CPU)
 
-| Implementation | Throughput | Memory Usage |
-|----------------|------------|--------------|
-| **Rust (model2vec-rs)** | **8,000 samples/sec** | ~150-250 MB |
-| Python (model2vec) | 4,650 samples/sec | ~1.2 GB |
+| Implementation | Throughput |
+|----------------|------------|
+| **Rust (model2vec-rs)** | **8,000 samples/sec** |
+| Python (model2vec) | 4,650 samples/sec |
 
-The Rust implementation is **1.7x faster** with **~80% less memory**.
+The Rust implementation is **1.7x faster**.
 
 ### Choosing a Model
 
