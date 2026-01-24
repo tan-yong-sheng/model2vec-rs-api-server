@@ -1,5 +1,5 @@
-# Build stage
-FROM --platform=$BUILDPLATFORM rust:1.83-alpine AS builder
+# Build stage - platform agnostic
+FROM rust:1.83-alpine AS builder
 
 WORKDIR /app
 
@@ -7,27 +7,18 @@ WORKDIR /app
 RUN apk add --no-cache musl-dev openssl-dev clang-dev gcc g++ libc-dev git
 
 ARG TARGETPLATFORM
-ARG BUILDPLATFORM
-
-# Install the correct toolchain for the target platform
-RUN case ${TARGETPLATFORM} in \
-         "linux/amd64") rustup target add x86_64-unknown-linux-musl ;; \
-         "linux/arm64") rustup target add aarch64-unknown-linux-musl ;; \
-    esac
 
 # Copy source files
 COPY Cargo.toml .
 COPY Cargo.lock .
 COPY src/ src/
 
-# Build the binary
-RUN case ${TARGETPLATFORM} in \
-        "linux/amd64") cargo build --release --target x86_64-unknown-linux-musl && mv target/x86_64-unknown-linux-musl/release/model2vec-api /app/model2vec-api ;; \
-        "linux/arm64") cargo build --release --target aarch64-unknown-linux-musl && mv target/aarch64-unknown-linux-musl/release/model2vec-api /app/model2vec-api ;; \
-    esac
+# Build the binary - native build for the platform we're running on
+RUN cargo build --release
 
-# Strip binary for smaller size
-RUN strip /app/model2vec-api
+# Rename the binary to a platform-agnostic name
+RUN mv target/release/model2vec-api /app/model2vec-api && \
+    strip /app/model2vec-api
 
 # Download model files from HuggingFace using git
 FROM alpine:3.19 AS model_downloader
