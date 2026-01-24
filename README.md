@@ -17,6 +17,7 @@ Note: On cold start, the server may take ~3–5 minutes while the model is downl
 | **Rust (model2vec-rs)** | **8,000 samples/sec** |
 | Python (model2vec) | 4,650 samples/sec |
 
+Noted that this api server takes around 1GB RAM usage to run.
 The Rust implementation is **1.7x faster**.
 
 ## Quick Start
