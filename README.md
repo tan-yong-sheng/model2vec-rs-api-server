@@ -8,6 +8,8 @@
 
 A **high-performance**, OpenAI-compatible embedding API server built with **Rust** and **[model2vec-rs](https://github.com/MinishLab/model2vec-rs)**. This server loads models directly from HuggingFace Hub using the official Rust crate - **no Python dependencies required**.
 
+Note: On cold start, the server may take ~3–5 minutes while the model is downloaded.
+
 ## Why Rust?
 
 | Implementation | Throughput | Memory Usage |

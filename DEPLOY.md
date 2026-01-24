@@ -278,7 +278,7 @@ AUTHENTICATION_ALLOWED_TOKENS=token1,token2,token3
 | RAM Usage | ~150-250 MB |
 | Disk (model cache) | 2-128 MB (varies by model) |
 | Throughput | ~8,000 samples/sec |
-| Cold Start | ~3-5 seconds (model download) |
+| Cold Start | ~3-5 minutes (model download) |
 
 ### Security
 
