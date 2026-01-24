@@ -4,7 +4,48 @@
 
 | Skill | Purpose |
 |-------|---------|
-| `model2vec-rs-migration` | Core migration skill with step-by-step checklist and examples |
+| `rust-pro` | Rust 1.75+ development, Tokio, Axum web services, async patterns |
+| `cicd-automation-workflow-automate` | GitHub Actions CI/CD pipelines, Docker builds, release automation |
+| `github-actions-templates` | Production-ready GitHub Actions workflow templates for Docker registries |
+
+## CI/CD & Docker Publishing Skills
+
+### cicd-automation-workflow-automate
+**Purpose:** Create efficient CI/CD pipelines, GitHub Actions workflows for Docker image builds, and automated publishing to Docker Hub.
+
+**Use Cases:**
+- Build and push Docker images on push/release
+- Multi-stage build pipelines with caching
+- Docker image security scanning (Trivy, Snyk)
+- Semantic versioning and release automation
+- Deploy to cloud container services (ECS, EKS, AKS, GKE)
+
+**Example Invocations:**
+- "Create a GitHub Actions workflow to build and push Docker images to Docker Hub on release"
+- "Set up CI pipeline with Docker build, test, and security scan stages"
+- "Automate Docker image versioning and manifest management"
+
+**Resources:**
+- `resources/implementation-playbook.md` - Detailed workflow patterns with Docker examples
+
+### github-actions-templates
+**Purpose:** Production-ready GitHub Actions workflow patterns for testing, building, and deploying applications with Docker support.
+
+**Use Cases:**
+- Build and push Docker images to GHCR or Docker Hub
+- Multi-platform Docker builds with cache optimization
+- Security scanning with Trivy
+- Matrix builds for multi-architecture images
+- Kubernetes deployment workflows
+
+**Example Invocations:**
+- "Create a Docker build-push workflow with metadata extraction and cache optimization"
+- "Set up a Rust CI pipeline with cargo test and clippy linting"
+- "Build multi-architecture Docker images for linux/amd64 and linux/arm64"
+
+**Reference Files:**
+- `assets/deploy-workflow.yml` - Deployment workflow template
+- `assets/matrix-build.yml` - Matrix build template
 
 ## Tech Stack
 

@@ -14,8 +14,6 @@ services:
       - AUTHENTICATION_ALLOWED_TOKENS=${AUTHENTICATION_ALLOWED_TOKENS:-}
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
-    volumes:
-      - ./models:/app/models:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/.well-known/ready"]

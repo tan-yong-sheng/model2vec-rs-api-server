@@ -2,7 +2,6 @@
 target/
 models/
 
-.claude/skills
 ralph-loop.local.md
 python-codebase.txt
 model2vec-rs.txt
