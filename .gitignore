@@ -1,5 +1,6 @@
 .env
 target/
+models/
 
 .claude/skills
 ralph-loop.local.md
