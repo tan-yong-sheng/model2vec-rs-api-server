@@ -321,3 +321,205 @@ For ARM64/AMD64 support:
 - **Docker Hub API**: https://docs.docker.com/docker-hub/api/latest/
 - **AGENTS.md**: See CI/CD skills section for workflow patterns
 - **TODO.md**: Track implementation progress
+- **DEPLOY.md**: Docker deployment instructions after publishing
+
+---
+
+# Docker Hub Publishing via GitHub Actions - Detailed Plan
+
+## Overview
+
+This section details the automated Docker image publishing pipeline for the model2vec-rs-api-server project. The workflow builds multi-architecture Docker images and publishes them to Docker Hub on:
+- Push to `main` branch (creates `latest` and `main-{sha}` tags)
+- Version tags matching `v*` pattern (creates `1.0.0`, `1.0`, `1` tags)
+- Pull requests (builds without pushing, for validation)
+
+## Architecture
+
+```
+GitHub Repository
+        │
+        ▼
+┌───────────────────┐
+│  GitHub Actions   │
+│  docker-publish   │
+│     workflow      │
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────┐
+│  Docker Buildx    │
+│  (BuildKit)       │
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────┐
+│  Docker Hub       │
+│  Registry         │
+│  docker.io/       │
+│  user/repo        │
+└───────────────────┘
+```
+
+## Prerequisites
+
+### 1. Docker Hub Setup
+
+| Step | Action | URL |
+|------|--------|-----|
+| 1.1 | Create Docker Hub account (if needed) | https://hub.docker.com |
+| 1.2 | Create repository `model2vec-rs-api-server` | Click "Create Repository" |
+| 1.3 | Generate access token | https://hub.docker.com/settings/security |
+
+### 2. GitHub Secrets Configuration
+
+| Secret Name | Value | Where to Find |
+|-------------|-------|---------------|
+| `DOCKERHUB_USERNAME` | Your Docker Hub username | Docker Hub profile |
+| `DOCKERHUB_TOKEN` | Access token | Docker Hub → Settings → Security → Access tokens |
+
+**Setup Path**: Repository → Settings → Secrets and variables → Actions → New repository secret
+
+## Workflow Triggers
+
+| Event | Condition | Image Tags Generated |
+|-------|-----------|---------------------|
+| Push to main | `refs/heads/main` | `latest`, `main-{short-sha}` |
+| Tag push | `refs/tags/v*` | `{version}`, `{major}.{minor}`, `{major}` |
+| Pull request | Any PR to main | (build only, no push) |
+
+## Build Configuration
+
+### Multi-Stage Build (via Dockerfile)
+
+```
+┌─────────────────────────────────────┐
+│ Stage 1: Build (rust:1.75-alpine)  │
+│ - Install build dependencies        │
+│ - Compile Rust binary with optlevel │
+│ - Strip binary for size reduction   │
+└────────────────┬────────────────────┘
+                 ▼
+┌─────────────────────────────────────┐
+│ Stage 2: Runtime (alpine:3.19)      │
+│ - Copy compiled binary              │
+│ - Copy model files (if pre-downloaded)
+│ - Install runtime dependencies      │
+└────────────────┬────────────────────┘
+```
+
+### Build Caching Strategy
+
+| Cache Type | Direction | Mode |
+|------------|-----------|------|
+| GitHub Actions cache (GHA) | Pull | - |
+| GitHub Actions cache (GHA) | Push | `max` (full build cache) |
+
+Benefits:
+- First build: Full compilation (~5-10 min)
+- Subsequent builds: Cache hit (~1-2 min)
+- Dependency changes: Incremental rebuild (~2-3 min)
+
+## Image Naming and Tagging
+
+### Repository Format
+```
+docker.io/{DOCKERHUB_USERNAME}/model2vec-rs-api-server:{tag}
+```
+
+### Tag Examples
+
+| Git Ref | Image Tag | Full Image Name |
+|---------|-----------|-----------------|
+| main branch | `latest` | docker.io/user/model2vec-rs-api-server:latest |
+| main branch | `main-a1b2c3d` | docker.io/user/model2vec-rs-api-server:main-a1b2c3d |
+| v1.0.0 tag | `1.0.0` | docker.io/user/model2vec-rs-api-server:1.0.0 |
+| v1.0.0 tag | `1.0` | docker.io/user/model2vec-rs-api-server:1.0 |
+| v1.0.0 tag | `1` | docker.io/user/model2vec-rs-api-server:1 |
+
+## Security Considerations
+
+### 1. Secret Management
+
+- **Never** commit secrets to the repository
+- Use GitHub's encrypted secrets
+- Rotate tokens periodically
+- Use least-privilege tokens (read/write only what's needed)
+
+### 2. Image Security (Optional Enhancements)
+
+| Feature | Tool | Purpose |
+|---------|------|---------|
+| Vulnerability scanning | Trivy | Scan for CVEs |
+| SBOM generation | docker/build-push-action | Software Bill of Materials |
+| Provenance | SLSA | Supply chain security |
+
+### 3. Workflow Permissions
+
+```yaml
+permissions:
+  contents: read      # Checkout code
+  packages: write     # Push images to registry
+  id-token: write     # OIDC for provenance (optional)
+```
+
+## Deployment Options
+
+### Pull Published Image
+
+```bash
+# Latest version
+docker pull docker.io/{DOCKERHUB_USERNAME}/model2vec-rs-api-server:latest
+
+# Specific version
+docker pull docker.io/{DOCKERHUB_USERNAME}/model2vec-rs-api-server:1.0.0
+```
+
+### Run Container
+
+```bash
+# Basic
+docker run -d -p 8080:8080 \
+  docker.io/{DOCKERHUB_USERNAME}/model2vec-rs-api-server:latest
+
+# With custom model
+docker run -d -p 8080:8080 \
+  -e MODEL_NAME=minishlab/potion-base-8M \
+  docker.io/{DOCKERHUB_USERNAME}/model2vec-rs-api-server:latest
+
+# With authentication
+docker run -d -p 8080:8080 \
+  -e AUTHENTICATION_ALLOWED_TOKENS=my-secret-token \
+  docker.io/{DOCKERHUB_USERNAME}/model2vec-rs-api-server:latest
+```
+
+### Docker Compose
+
+```yaml
+services:
+  model2vec:
+    image: docker.io/{DOCKERHUB_USERNAME}/model2vec-rs-api-server:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - MODEL_NAME=minishlab/potion-base-8M
+      - AUTHENTICATION_ALLOWED_TOKENS=${AUTH_TOKEN}
+```
+
+## Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Authentication failed | Verify DOCKERHUB_TOKEN is valid and not expired |
+| Build fails on main | Check Docker Hub repository exists |
+| Cache not working | Verify GHA cache permissions are set |
+| Tags not generated | Check GitHub Actions workflow syntax |
+| Image not pulling | Verify image name matches Docker Hub repository |
+
+## Future Enhancements (Optional)
+
+1. **Multi-architecture builds**: Support linux/amd64 and linux/arm64
+2. **Security scanning**: Add Trivy vulnerability scanner
+3. **SLSA provenance**: Enable image provenance for supply chain security
+4. **Automatic versioning**: Sync with Cargo.toml version
+5. **Image signing**: Sign images with cosign

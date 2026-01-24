@@ -98,7 +98,8 @@ The server is running locally at http://localhost:8080 with:
 
 ## Phase 2: GitHub Actions Workflow
 
-- [ ] Create `.github/workflows/docker-publish.yml`
+- [x] Create `.github/workflows/docker-publish.yml`
+- [ ] Verify workflow syntax (run dry-run or check GitHub Actions UI)
 - [ ] Test workflow on push to main branch
 - [ ] Test workflow on tag push (v*)
 - [ ] Verify image published to Docker Hub
@@ -138,3 +139,11 @@ curl -X POST http://localhost:8080/v1/embeddings \
   -H "Content-Type: application/json" \
   -d '{"input": "hello world", "model": "minishlab/potion-base-8M"}'
 ```
+
+## Documentation References
+
+| Document | Purpose |
+|----------|---------|
+| [PLAN.md](PLAN.md) | Detailed Docker Hub publishing plan |
+| [AGENTS.md](AGENTS.md) | CI/CD skills and workflow templates |
+| [DEPLOY.md](DEPLOY.md) | Docker deployment instructions |
