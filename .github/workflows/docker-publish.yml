@@ -44,6 +44,7 @@ jobs:
             type=sha
 
       - name: Build and push
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -54,4 +55,4 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Show image digest
-        run: echo "Image published: ${{ steps.meta.outputs.tags }}"
+        run: echo "Image digest: ${{ steps.build.outputs.digest }}"
