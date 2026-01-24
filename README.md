@@ -12,7 +12,7 @@ A **high-performance**, OpenAI-compatible embedding API server built with **Rust
 
 | Implementation | Throughput | Memory Usage |
 |----------------|------------|--------------|
-| **Rust (model2vec-rs)** | **8,000 samples/sec** | ~150-250 MB |
+| **Rust (model2vec-rs)** | **8,000 samples/sec** | ~50-100 MB |
 | Python (model2vec) | 4,650 samples/sec | ~1.2 GB |
 
 The Rust implementation is **1.7x faster** with **~80% less memory**.
@@ -148,15 +148,7 @@ model2vec-rs-api-server/
 ## Performance
 
 - **Throughput**: ~8,000 samples/second (single-threaded CPU)
-- **Memory Usage**: ~150-250 MB
-- **Cold Start**: ~3-5 seconds (first model download)
-
-## Docker Image Sizes
-
-| Stage | Size |
-|-------|------|
-| Builder | ~2 GB |
-| Runtime (with model) | ~150 MB |
+- **Memory Usage**: ~50-100 MB
 
 ## Resources
 
@@ -170,6 +162,8 @@ model2vec-rs-api-server/
 MIT License - see [LICENSE](LICENSE) for details.
 
 ## Citation
+
+Credit to: [https://github.com/MinishLab/model2vec-rs](https://github.com/MinishLab/model2vec-rs)
 
 If you use Model2Vec in your research, please cite:
 
