@@ -109,6 +109,7 @@ Create a `.env` file:
 MODEL_NAME=minishlab/potion-base-8M
 ALIAS_MODEL_NAME=my-model
 PORT=8080
+LAZY_LOAD_MODEL=false
 AUTHENTICATION_ALLOWED_TOKENS=token1,token2
 ```
 
@@ -117,6 +118,7 @@ AUTHENTICATION_ALLOWED_TOKENS=token1,token2
 | `MODEL_NAME` | minishlab/potion-base-8M | HuggingFace model ID |
 | `ALIAS_MODEL_NAME` | - | Optional model alias |
 | `PORT` | 8080 | Server port |
+| `LAZY_LOAD_MODEL` | false | When `true`, delays model loading until first request. Useful for large models (128M+) to reduce startup time |
 | `AUTHENTICATION_ALLOWED_TOKENS` | - | Comma-separated tokens |
 
 ## Architecture

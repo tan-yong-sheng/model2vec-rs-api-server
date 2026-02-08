@@ -254,6 +254,11 @@ ALIAS_MODEL_NAME=my-embedding-model
 # Server port
 PORT=8080
 
+# Lazy load model (optional) - set to true to delay model loading until first request
+# Default: false (model loads at startup)
+# Recommended: false for small models, true for large models (128M+) to reduce startup time
+LAZY_LOAD_MODEL=false
+
 # Optional: Authentication (comma-separated bearer tokens)
 AUTHENTICATION_ALLOWED_TOKENS=token1,token2,token3
 ```
@@ -265,6 +270,7 @@ AUTHENTICATION_ALLOWED_TOKENS=token1,token2,token3
 | `MODEL_NAME` | No | minishlab/potion-base-8M | HuggingFace model ID |
 | `ALIAS_MODEL_NAME` | No | - | Optional model alias |
 | `PORT` | No | 8080 | HTTP server port |
+| `LAZY_LOAD_MODEL` | No | false | When `true`, delays model loading until first request. Useful for large models (128M+) to reduce startup time |
 | `AUTHENTICATION_ALLOWED_TOKENS` | No | - | Comma-separated tokens |
 
 ---
@@ -279,6 +285,44 @@ AUTHENTICATION_ALLOWED_TOKENS=token1,token2,token3
 | Disk (model cache) | 2-128 MB (varies by model) |
 | Throughput | ~8,000 samples/sec |
 | Cold Start | ~3-5 minutes (model download) |
+
+### Lazy Loading vs Eager Loading
+
+The server supports two model loading strategies:
+
+#### Eager Loading (Default: `LAZY_LOAD_MODEL=false`)
+- Model loads during server startup
+- First request is fast (already loaded)
+- Startup takes longer (can be several minutes for large models)
+- Recommended for small models (8M, 32M) and production environments
+- Health checks return 204 only after model is loaded
+
+#### Lazy Loading (`LAZY_LOAD_MODEL=true`)
+- Server starts immediately without loading the model
+- Model loads on first embedding request
+- First request is slower (includes model loading time)
+- Recommended for large models (128M+) and development environments
+- Health checks return 204 before model is loaded
+
+**Example with 128M multilingual model:**
+```bash
+# Eager loading: ~2-3 minutes startup, instant first request
+LAZY_LOAD_MODEL=false ./target/release/model2vec-api
+
+# Lazy loading: instant startup, ~2-3 minutes first request
+LAZY_LOAD_MODEL=true ./target/release/model2vec-api
+```
+
+**When to use lazy loading:**
+- Large models (128M+) with long load times
+- Development/testing environments
+- Kubernetes deployments with health check timeouts
+- When you need the server to be "ready" quickly
+
+**When to use eager loading:**
+- Production environments requiring consistent performance
+- Small to medium models (2M-32M)
+- When first request latency is critical
 
 ### Security
 
