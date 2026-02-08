@@ -373,11 +373,13 @@ Active Period:
 Request → Model Loaded (250MB) → Process → Update Last Request Time
 
 Idle Detection:
-Background Task (every 3 min) → Check Idle Time → If > 30 min → Unload Model → 20MB RAM
+Background Task (periodically) → Check Idle Time → If > timeout → Unload Model → 20MB RAM
 
 Next Request After Idle:
 Request → Detect Model Unloaded → Reload Model (150s) → Process Request → Model Loaded (250MB)
 ```
+
+*Background task checks every timeout/10 seconds (minimum 10 seconds, rounded up)*
 
 ### Security
 

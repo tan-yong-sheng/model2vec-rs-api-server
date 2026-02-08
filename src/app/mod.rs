@@ -23,7 +23,13 @@ impl AppState {
     /// Create new application state
     pub async fn new() -> Self {
         let config = Arc::new(Config::from_env());
-        let last_request_time = Arc::new(AtomicU64::new(Self::current_timestamp()));
+        // Initialize timestamp to 0 if lazy loading, otherwise current time
+        let initial_timestamp = if config.lazy_load_model {
+            0 // Will be set on first request
+        } else {
+            Self::current_timestamp()
+        };
+        let last_request_time = Arc::new(AtomicU64::new(initial_timestamp));
 
         // Initialize vectorizer based on lazy_load_model setting
         let vectorizer = if config.lazy_load_model {
@@ -74,7 +80,14 @@ impl AppState {
             }
         }
 
-        // Load the model
+        // Load the model (write lock to prevent duplicate loads)
+        let mut guard = VECTORIZER.write().await;
+        
+        // Double-check after acquiring write lock (another task may have loaded it)
+        if let Some(vec) = guard.as_ref() {
+            return vec.clone();
+        }
+
         let vec = Arc::new(
             Model2VecVectorizer::new(model_name)
                 .await
@@ -82,11 +95,8 @@ impl AppState {
         );
 
         // Store in static cache
-        {
-            let mut guard = VECTORIZER.write().await;
-            *guard = Some(vec.clone());
-        }
-
+        *guard = Some(vec.clone());
+        
         vec
     }
 
@@ -110,61 +120,70 @@ impl AppState {
         let elapsed = start.elapsed();
         tracing::info!("Model loaded on demand in {:.2}s", elapsed.as_secs_f64());
 
-        // Store in instance
+        // Store in instance (write lock to prevent race)
         {
             let mut guard = self.vectorizer.write().await;
-            *guard = Some(vec.clone());
+            // Check again in case another task loaded it
+            if guard.is_none() {
+                *guard = Some(vec.clone());
+            }
         }
 
         vec
     }
 
     /// Unload the vectorizer to free memory
-    async fn unload_vectorizer(&self) {
+    async fn unload_vectorizer(&self) -> bool {
+        // Acquire write lock and check if model is loaded before unloading
+        let mut instance_guard = self.vectorizer.write().await;
+        let mut static_guard = VECTORIZER.write().await;
+        
+        // Only unload if both are actually loaded
+        if instance_guard.is_none() && static_guard.is_none() {
+            return false; // Already unloaded
+        }
+        
         tracing::info!("Unloading model to free memory");
         
-        // Clear instance storage
-        {
-            let mut guard = self.vectorizer.write().await;
-            *guard = None;
-        }
-
-        // Clear static storage
-        {
-            let mut guard = VECTORIZER.write().await;
-            *guard = None;
-        }
+        // Clear both storages
+        *instance_guard = None;
+        *static_guard = None;
 
         tracing::info!("Model unloaded successfully");
+        true
     }
 
     /// Start background task to monitor idle time and unload model
     fn start_idle_monitor(self) {
-        let check_interval = std::cmp::max(self.config.model_unload_idle_timeout / 10, 10);
+        // Calculate check interval: max(timeout / 10, 10 seconds)
+        let check_interval = std::cmp::max(
+            (self.config.model_unload_idle_timeout + 9) / 10,  // Round up division
+            10
+        );
         
         tokio::spawn(async move {
             loop {
                 tokio::time::sleep(std::time::Duration::from_secs(check_interval)).await;
 
-                // Check if model should be unloaded
                 let last_request = self.last_request_time.load(Ordering::Relaxed);
+                
+                // Skip if no requests have been made yet (lazy loading not triggered)
+                if last_request == 0 {
+                    continue;
+                }
+
+                // Check if model should be unloaded
                 let now = Self::current_timestamp();
                 let idle_duration = now.saturating_sub(last_request);
 
                 if idle_duration >= self.config.model_unload_idle_timeout {
-                    // Check if model is currently loaded
-                    let is_loaded = {
-                        let guard = self.vectorizer.read().await;
-                        guard.is_some()
-                    };
-
-                    if is_loaded {
+                    let was_unloaded = self.unload_vectorizer().await;
+                    if was_unloaded {
                         tracing::info!(
-                            "Model idle for {}s (threshold: {}s), unloading...",
+                            "Model was idle for {}s (threshold: {}s)",
                             idle_duration,
                             self.config.model_unload_idle_timeout
                         );
-                        self.unload_vectorizer().await;
                     }
                 }
             }
