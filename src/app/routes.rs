@@ -139,7 +139,8 @@ pub async fn create_embeddings(
 
     // Vectorize
     let input = request.input.to_text_input();
-    let embeddings = state.vectorizer.vectorize(&input).await;
+    let vectorizer = state.get_vectorizer().await;
+    let embeddings = vectorizer.vectorize(&input).await;
 
     // Handle dimensions truncation
     let embeddings: Vec<Vec<f32>> = if let Some(dims) = request.dimensions {

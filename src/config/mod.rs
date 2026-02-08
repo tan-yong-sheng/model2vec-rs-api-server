@@ -7,6 +7,7 @@ pub struct Config {
     pub allowed_tokens: Vec<String>,
     pub port: u16,
     pub model_path: String,
+    pub lazy_load_model: bool,
 }
 
 impl Config {
@@ -22,6 +23,10 @@ impl Config {
             .ok()
             .and_then(|p| p.parse().ok())
             .unwrap_or(8080);
+        let lazy_load_model = env::var("LAZY_LOAD_MODEL")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(false);
 
         Self {
             model_name,
@@ -29,6 +34,7 @@ impl Config {
             allowed_tokens,
             port,
             model_path: "./models".to_string(),
+            lazy_load_model,
         }
     }
 
