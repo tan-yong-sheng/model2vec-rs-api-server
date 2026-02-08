@@ -295,14 +295,14 @@ The server supports two model loading strategies:
 - First request is fast (already loaded)
 - Startup takes longer (can be several minutes for large models)
 - Recommended for small models (8M, 32M) and production environments
-- Health checks return 204 only after model is loaded
 
 #### Lazy Loading (`LAZY_LOAD_MODEL=true`)
 - Server starts immediately without loading the model
 - Model loads on first embedding request
 - First request is slower (includes model loading time)
 - Recommended for large models (128M+) and development environments
-- Health checks return 204 before model is loaded
+
+**Note:** Health check endpoints (`/.well-known/live` and `/.well-known/ready`) return 204 immediately regardless of model loading state.
 
 **Example with 128M multilingual model:**
 ```bash
