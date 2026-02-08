@@ -1,0 +1,180 @@
+================================================
+Multi-Model Benchmark for PR #1
+================================================
+
+This will test each model sequentially.
+Total estimated time: 15-25 minutes
+
+
+========================================
+Testing: minishlab/potion-base-2M
+Expected Size: ~2MB
+========================================
+Starting container...
+d6b31d999f4dbf1a17ea8f5aadde1591be0b2215bd61c6ac2d8081c28c05a729
+Waiting for startup...... OK (4s)
+Memory at startup: 13.54MiB
+Making first request...
+First request latency: 11ms
+Memory during active use: 13.71MiB
+Waiting 30s for idle timeout...
+Waiting additional 5s for unload...
+Memory after idle (unloaded): 1.336MiB
+Testing reload time (first request after unload)...
+RELOAD TIME: 77ms
+Memory after reload: 21.09MiB
+Container logs (last 5 lines):
+[2m2026-02-08T13:49:40.897281Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Model unloading enabled - idle timeout: 30s
+[2m2026-02-08T13:50:20.901521Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Unloading model to free memory
+[2m2026-02-08T13:50:20.906934Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Model unloaded successfully
+[2m2026-02-08T13:50:20.906959Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Model was idle for 36s (threshold: 30s)
+model2vec-test
+model2vec-test
+
+RESULTS_SUMMARY|minishlab/potion-base-2M|~2MB|13.54MiB|13.71MiB|1.336MiB|77|21.09MiB
+
+
+========================================
+Testing: minishlab/potion-base-4M
+Expected Size: ~4MB
+========================================
+Starting container...
+261af45c72850d4c30c52faebbe6bcf95bfc5b191eff96add5abe9d455a37b80
+Waiting for startup....... OK (4s)
+Memory at startup: 20.96MiB
+Making first request...
+First request latency: 10ms
+Memory during active use: 21.16MiB
+Waiting 30s for idle timeout...
+Waiting additional 5s for unload...
+Memory after idle (unloaded): 1.555MiB
+Testing reload time (first request after unload)...
+RELOAD TIME: 76ms
+Memory after reload: 35.25MiB
+Container logs (last 5 lines):
+[2m2026-02-08T13:50:42.091329Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Model unloading enabled - idle timeout: 30s
+[2m2026-02-08T13:51:22.095452Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Unloading model to free memory
+[2m2026-02-08T13:51:22.101820Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Model unloaded successfully
+[2m2026-02-08T13:51:22.101845Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Model was idle for 36s (threshold: 30s)
+model2vec-test
+model2vec-test
+
+RESULTS_SUMMARY|minishlab/potion-base-4M|~4MB|20.96MiB|21.16MiB|1.555MiB|76|35.25MiB
+
+
+========================================
+Testing: minishlab/potion-base-8M
+Expected Size: ~8MB
+========================================
+Starting container...
+c2bc87d7ff79b23d696572984d9a2cee9d636795a5b491caf788605533fab22d
+Waiting for startup..... OK (2s)
+Memory at startup: 35.86MiB
+Making first request...
+First request latency: 11ms
+Memory during active use: 36.04MiB
+Waiting 30s for idle timeout...
+Waiting additional 5s for unload...
+Memory after idle (unloaded): 2MiB
+Testing reload time (first request after unload)...
+RELOAD TIME: 95ms
+Memory after reload: 63.61MiB
+Container logs (last 5 lines):
+[2m2026-02-08T13:51:42.179609Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Model unloading enabled - idle timeout: 30s
+[2m2026-02-08T13:52:22.182931Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Unloading model to free memory
+[2m2026-02-08T13:52:22.189840Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Model unloaded successfully
+[2m2026-02-08T13:52:22.189864Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Model was idle for 36s (threshold: 30s)
+model2vec-test
+model2vec-test
+
+RESULTS_SUMMARY|minishlab/potion-base-8M|~8MB|35.86MiB|36.04MiB|2MiB|95|63.61MiB
+
+
+========================================
+Testing: minishlab/potion-base-32M
+Expected Size: ~32MB
+========================================
+Starting container...
+14ee6c341cb9031afdaba7722650f6fbc8591c36616c83e678489275c4a9b7c7
+Waiting for startup........... OK (8s)
+Memory at startup: 138.7MiB
+Making first request...
+First request latency: 11ms
+Memory during active use: 138.9MiB
+Waiting 30s for idle timeout...
+Waiting additional 5s for unload...
+Memory after idle (unloaded): 4.945MiB
+Testing reload time (first request after unload)...
+RELOAD TIME: 302ms
+Memory after reload: 255.2MiB
+Container logs (last 5 lines):
+[2m2026-02-08T13:52:48.231835Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Model unloading enabled - idle timeout: 30s
+[2m2026-02-08T13:53:28.237209Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Unloading model to free memory
+[2m2026-02-08T13:53:28.256326Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Model unloaded successfully
+[2m2026-02-08T13:53:28.256355Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Model was idle for 36s (threshold: 30s)
+model2vec-test
+model2vec-test
+
+RESULTS_SUMMARY|minishlab/potion-base-32M|~32MB|138.7MiB|138.9MiB|4.945MiB|302|255.2MiB
+
+
+========================================
+Testing: minishlab/potion-retrieval-32M
+Expected Size: ~32MB
+========================================
+Starting container...
+9bf6e6253ad3201d106192d771cabb19607e98c6082a1956df769a3733b3618c
+Waiting for startup............ OK (9s)
+Memory at startup: 138.7MiB
+Making first request...
+First request latency: 12ms
+Memory during active use: 138.9MiB
+Waiting 30s for idle timeout...
+Waiting additional 5s for unload...
+Memory after idle (unloaded): 4.98MiB
+Testing reload time (first request after unload)...
+RELOAD TIME: 277ms
+Memory after reload: 255.3MiB
+Container logs (last 5 lines):
+[2m2026-02-08T13:53:55.451201Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Model unloading enabled - idle timeout: 30s
+[2m2026-02-08T13:54:35.456297Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Unloading model to free memory
+[2m2026-02-08T13:54:35.476334Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Model unloaded successfully
+[2m2026-02-08T13:54:35.476360Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Model was idle for 36s (threshold: 30s)
+model2vec-test
+model2vec-test
+
+RESULTS_SUMMARY|minishlab/potion-retrieval-32M|~32MB|138.7MiB|138.9MiB|4.98MiB|277|255.3MiB
+
+
+========================================
+Testing: minishlab/potion-multilingual-128M
+Expected Size: ~128MB
+========================================
+Starting container...
+3dc7063e02f7b79e3348805dab61d9607e9c50e7a8cc48c71ce54e58d3b393ff
+Waiting for startup......... OK (6s)
+Memory at startup: 1.02GiB
+Making first request...
+First request latency: 11ms
+Memory during active use: 1.02GiB
+Waiting 30s for idle timeout...
+Waiting additional 5s for unload...
+Memory after idle (unloaded): 19.58MiB
+Testing reload time (first request after unload)...
+RELOAD TIME: 3114ms
+Memory after reload: 1.456GiB
+Container logs (last 5 lines):
+[2m2026-02-08T13:54:59.710621Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Model unloading enabled - idle timeout: 30s
+[2m2026-02-08T13:55:39.716337Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Unloading model to free memory
+[2m2026-02-08T13:55:40.589955Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Model unloaded successfully
+[2m2026-02-08T13:55:40.589979Z[0m [32m INFO[0m [2mmodel2vec_api::app[0m[2m:[0m Model was idle for 36s (threshold: 30s)
+model2vec-test
+model2vec-test
+
+RESULTS_SUMMARY|minishlab/potion-multilingual-128M|~128MB|1.02GiB|1.02GiB|19.58MiB|3114|1.456GiB
+
+
+========================================
+All tests complete!
+Results saved to: model_benchmark_results.txt
+========================================

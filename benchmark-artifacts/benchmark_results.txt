@@ -1,0 +1,166 @@
+==================================
+Model2Vec API Server Benchmark
+Model: minishlab/potion-base-8M
+==================================
+Starting comprehensive benchmark...
+This will take approximately 5-8 minutes
+
+==================================
+Scenario: A: Baseline (Eager, No Unload)
+==================================
+
+--- Starting container: model2vec-test ---
+LAZY_LOAD_MODEL=false
+MODEL_UNLOAD_ENABLED=false
+MODEL_UNLOAD_IDLE_TIMEOUT=30s
+2d9a3972e33258b615a7ad6d12ea39137d0764bfd89201f33cf1b7a775232a22
+Waiting for server to be ready........ OK (5s)
+Startup time: 6s
+Memory at startup: 35.86MiB
+
+Testing first request...
+First request: SUCCESS (total: 0.001935s)
+First request total time: 0s
+Memory after first request: 36.04MiB
+
+Running warm-up requests...
+Request 1: SUCCESS (total: 0.001642s)
+Request 2: SUCCESS (total: 0.001054s)
+Request 3: SUCCESS (total: 0.001172s)
+Memory during active use: 36.05MiB
+
+Waiting 30s (simulating idle period)...
+Memory after idle period: 36.05MiB
+model2vec-test
+model2vec-test
+
+--- SUMMARY: A: Baseline (Eager, No Unload) ---
+Startup time: 6s
+Memory startup: 35.86MiB
+Memory active: 36.05MiB
+
+==================================
+Scenario: B: Lazy Loading Only
+==================================
+
+--- Starting container: model2vec-test ---
+LAZY_LOAD_MODEL=true
+MODEL_UNLOAD_ENABLED=false
+MODEL_UNLOAD_IDLE_TIMEOUT=30s
+fb084415f41015b7af4488839fe3b5ace01bb73b988cb411812648cbab8fa072
+Waiting for server to be ready... OK (0s)
+Startup time: 0s
+Memory at startup: 604KiB
+
+Testing first request...
+First request: SUCCESS (total: 1.573897s)
+First request total time: 1s
+Memory after first request: 36.05MiB
+
+Running warm-up requests...
+Request 1: SUCCESS (total: 0.001294s)
+Request 2: SUCCESS (total: 0.001282s)
+Request 3: SUCCESS (total: 0.001133s)
+Memory during active use: 36.07MiB
+
+Waiting 30s (simulating idle period)...
+Memory after idle period: 36.07MiB
+model2vec-test
+model2vec-test
+
+--- SUMMARY: B: Lazy Loading Only ---
+Startup time: 0s
+Memory startup: 604KiB
+First request time: 1s (includes model load)
+Memory active: 36.07MiB
+
+==================================
+Scenario: C: Eager + Unload (30s timeout)
+==================================
+
+--- Starting container: model2vec-test ---
+LAZY_LOAD_MODEL=false
+MODEL_UNLOAD_ENABLED=true
+MODEL_UNLOAD_IDLE_TIMEOUT=30s
+9d91b3c5fb84edecb1614ac8dbf5da0a0264f625f11e29edb98f471089ce43cf
+Waiting for server to be ready..... OK (2s)
+Startup time: 3s
+Memory at startup: 35.84MiB
+
+Testing first request...
+First request: SUCCESS (total: 0.001866s)
+First request total time: 0s
+Memory after first request: 36.03MiB
+
+Running warm-up requests...
+Request 1: SUCCESS (total: 0.001507s)
+Request 2: SUCCESS (total: 0.001128s)
+Request 3: SUCCESS (total: 0.001135s)
+Memory during active use: 36.04MiB
+
+Waiting 30s for idle timeout...
+Waiting additional 5s for unload to complete...
+Memory after idle: 1.98MiB
+
+*** CRITICAL: Testing reload after unload ***
+Reload request: SUCCESS (total: 0.087149s)
+*** RELOAD TIME: 0s ***
+Memory after reload: 63.59MiB
+model2vec-test
+model2vec-test
+
+--- SUMMARY: C: Eager + Unload (30s timeout) ---
+Startup time: 3s
+Memory startup: 35.84MiB
+Memory active: 36.04MiB
+Memory idle: 1.98MiB
+RELOAD TIME: 0s
+Memory after reload: 63.59MiB
+
+==================================
+Scenario: D: Lazy + Unload (30s timeout)
+==================================
+
+--- Starting container: model2vec-test ---
+LAZY_LOAD_MODEL=true
+MODEL_UNLOAD_ENABLED=true
+MODEL_UNLOAD_IDLE_TIMEOUT=30s
+2eafa5b371413b445b66cd80c50a6565e5ffd09154839d8f17a3a45f51eb26f6
+Waiting for server to be ready... OK (0s)
+Startup time: 0s
+Memory at startup: 596KiB
+
+Testing first request...
+First request: SUCCESS (total: 1.607153s)
+First request total time: 1s
+Memory after first request: 36.02MiB
+
+Running warm-up requests...
+Request 1: SUCCESS (total: 0.001578s)
+Request 2: SUCCESS (total: 0.001292s)
+Request 3: SUCCESS (total: 0.001098s)
+Memory during active use: 36.04MiB
+
+Waiting 30s for idle timeout...
+Waiting additional 5s for unload to complete...
+Memory after idle: 1.984MiB
+
+*** CRITICAL: Testing reload after unload ***
+Reload request: SUCCESS (total: 0.093837s)
+*** RELOAD TIME: 0s ***
+Memory after reload: 63.57MiB
+model2vec-test
+model2vec-test
+
+--- SUMMARY: D: Lazy + Unload (30s timeout) ---
+Startup time: 0s
+Memory startup: 596KiB
+First request time: 1s (includes model load)
+Memory active: 36.04MiB
+Memory idle: 1.984MiB
+RELOAD TIME: 0s
+Memory after reload: 63.57MiB
+
+==================================
+BENCHMARK COMPLETE
+==================================
