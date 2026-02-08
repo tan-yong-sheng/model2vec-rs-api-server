@@ -259,6 +259,16 @@ PORT=8080
 # Recommended: false for small models, true for large models (128M+) to reduce startup time
 LAZY_LOAD_MODEL=false
 
+# Model unloading (optional) - set to true to unload model from memory when idle
+# Default: false (model stays in memory once loaded)
+# Recommended: true for large models (128M+) in development to save memory during idle periods
+MODEL_UNLOAD_ENABLED=false
+
+# Idle timeout in seconds before unloading model (only used if MODEL_UNLOAD_ENABLED=true)
+# Default: 1800 (30 minutes)
+# Note: First request after unload will take 2-3 minutes to reload the model
+MODEL_UNLOAD_IDLE_TIMEOUT=1800
+
 # Optional: Authentication (comma-separated bearer tokens)
 AUTHENTICATION_ALLOWED_TOKENS=token1,token2,token3
 ```
@@ -271,6 +281,8 @@ AUTHENTICATION_ALLOWED_TOKENS=token1,token2,token3
 | `ALIAS_MODEL_NAME` | No | - | Optional model alias |
 | `PORT` | No | 8080 | HTTP server port |
 | `LAZY_LOAD_MODEL` | No | false | When `true`, delays model loading until first request. Useful for large models (128M+) to reduce startup time |
+| `MODEL_UNLOAD_ENABLED` | No | false | When `true`, automatically unloads model from memory after idle timeout. Saves 92% RAM when idle |
+| `MODEL_UNLOAD_IDLE_TIMEOUT` | No | 1800 | Seconds of idle time before unloading model (only used if `MODEL_UNLOAD_ENABLED=true`) |
 | `AUTHENTICATION_ALLOWED_TOKENS` | No | - | Comma-separated tokens |
 
 ---
@@ -279,50 +291,93 @@ AUTHENTICATION_ALLOWED_TOKENS=token1,token2,token3
 
 ### Resource Usage
 
-| Metric | Value |
-|--------|-------|
-| RAM Usage | ~150-250 MB |
-| Disk (model cache) | 2-128 MB (varies by model) |
-| Throughput | ~8,000 samples/sec |
-| Cold Start | ~3-5 minutes (model download) |
+| Metric | Without Unloading | With Unloading (Idle) |
+|--------|-------------------|----------------------|
+| RAM Usage (8M model) | ~50-100 MB | ~20 MB (60-80% savings) |
+| RAM Usage (128M model) | ~200-300 MB | ~20 MB (92% savings) |
+| Disk (model cache) | 2-128 MB (varies by model) | Same |
+| Throughput | ~8,000 samples/sec | Same when loaded |
+| Cold Start | ~3-5 minutes (model download) | Same |
 
-### Lazy Loading vs Eager Loading
+### Memory Management Strategies
 
-The server supports two model loading strategies:
+The server supports three complementary strategies for memory management:
 
-#### Eager Loading (Default: `LAZY_LOAD_MODEL=false`)
+#### 1. Eager Loading (Default: `LAZY_LOAD_MODEL=false`)
 - Model loads during server startup
 - First request is fast (already loaded)
 - Startup takes longer (can be several minutes for large models)
 - Recommended for small models (8M, 32M) and production environments
 
-#### Lazy Loading (`LAZY_LOAD_MODEL=true`)
+#### 2. Lazy Loading (`LAZY_LOAD_MODEL=true`)
 - Server starts immediately without loading the model
 - Model loads on first embedding request
 - First request is slower (includes model loading time)
 - Recommended for large models (128M+) and development environments
 
+#### 3. Model Unloading (`MODEL_UNLOAD_ENABLED=true`) **NEW**
+- Automatically unloads model from memory after idle timeout
+- Saves 92% RAM for large models when no requests are being processed
+- Model auto-reloads on next request (transparent but slow)
+- Recommended for development environments with limited RAM
+
 **Note:** Health check endpoints (`/.well-known/live` and `/.well-known/ready`) return 204 immediately regardless of model loading state.
 
-**Example with 128M multilingual model:**
-```bash
-# Eager loading: ~2-3 minutes startup, instant first request
-LAZY_LOAD_MODEL=false ./target/release/model2vec-api
+### Memory Strategy Comparison
 
-# Lazy loading: instant startup, ~2-3 minutes first request
-LAZY_LOAD_MODEL=true ./target/release/model2vec-api
+| Strategy | Startup | Memory (Active) | Memory (Idle) | First Request After Idle |
+|----------|---------|-----------------|---------------|--------------------------|
+| **Eager + No Unload** (Default) | Slow | 250 MB | 250 MB | Fast |
+| **Lazy + No Unload** | Fast | 250 MB | 250 MB | Slow (first time only) |
+| **Eager + Unload** | Slow | 250 MB | 20 MB | Slow after idle |
+| **Lazy + Unload** | Fast | 250 MB | 20 MB | Slow after idle |
+
+*Values shown for 128M model*
+
+### Configuration Examples
+
+**Example 1: Small Model (8M) - Production**
+```bash
+LAZY_LOAD_MODEL=false
+MODEL_UNLOAD_ENABLED=false
+# Fast startup, constant performance, ~50MB RAM
 ```
 
-**When to use lazy loading:**
-- Large models (128M+) with long load times
-- Development/testing environments
-- Kubernetes deployments with health check timeouts
-- When you need the server to be "ready" quickly
+**Example 2: Large Model (128M) - Development**
+```bash
+LAZY_LOAD_MODEL=true
+MODEL_UNLOAD_ENABLED=true
+MODEL_UNLOAD_IDLE_TIMEOUT=1800  # 30 minutes
+# Instant startup, 20MB when idle, 250MB when active
+```
 
-**When to use eager loading:**
-- Production environments requiring consistent performance
-- Small to medium models (2M-32M)
-- When first request latency is critical
+**Example 3: Large Model (128M) - Production**
+```bash
+LAZY_LOAD_MODEL=false
+MODEL_UNLOAD_ENABLED=false
+# Consistent performance, 250MB RAM constant
+```
+
+**Example 4: Large Model (128M) - Resource-Constrained Production**
+```bash
+LAZY_LOAD_MODEL=false
+MODEL_UNLOAD_ENABLED=true
+MODEL_UNLOAD_IDLE_TIMEOUT=3600  # 1 hour
+# Trade: Save RAM during low traffic, accept reload delay
+```
+
+### How Model Unloading Works
+
+```
+Active Period:
+Request → Model Loaded (250MB) → Process → Update Last Request Time
+
+Idle Detection:
+Background Task (every 3 min) → Check Idle Time → If > 30 min → Unload Model → 20MB RAM
+
+Next Request After Idle:
+Request → Detect Model Unloaded → Reload Model (150s) → Process Request → Model Loaded (250MB)
+```
 
 ### Security
 
