@@ -7,6 +7,9 @@ pub struct Config {
     pub allowed_tokens: Vec<String>,
     pub port: u16,
     pub model_path: String,
+    pub lazy_load_model: bool,
+    pub model_unload_enabled: bool,
+    pub model_unload_idle_timeout: u64,
 }
 
 impl Config {
@@ -22,6 +25,18 @@ impl Config {
             .ok()
             .and_then(|p| p.parse().ok())
             .unwrap_or(8080);
+        let lazy_load_model = env::var("LAZY_LOAD_MODEL")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(false);
+        let model_unload_enabled = env::var("MODEL_UNLOAD_ENABLED")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(false);
+        let model_unload_idle_timeout = env::var("MODEL_UNLOAD_IDLE_TIMEOUT")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(1800); // 30 minutes default
 
         Self {
             model_name,
@@ -29,6 +44,9 @@ impl Config {
             allowed_tokens,
             port,
             model_path: "./models".to_string(),
+            lazy_load_model,
+            model_unload_enabled,
+            model_unload_idle_timeout,
         }
     }
 

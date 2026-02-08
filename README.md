@@ -109,6 +109,9 @@ Create a `.env` file:
 MODEL_NAME=minishlab/potion-base-8M
 ALIAS_MODEL_NAME=my-model
 PORT=8080
+LAZY_LOAD_MODEL=false
+MODEL_UNLOAD_ENABLED=false
+MODEL_UNLOAD_IDLE_TIMEOUT=1800
 AUTHENTICATION_ALLOWED_TOKENS=token1,token2
 ```
 
@@ -117,7 +120,24 @@ AUTHENTICATION_ALLOWED_TOKENS=token1,token2
 | `MODEL_NAME` | minishlab/potion-base-8M | HuggingFace model ID |
 | `ALIAS_MODEL_NAME` | - | Optional model alias |
 | `PORT` | 8080 | Server port |
+| `LAZY_LOAD_MODEL` | false | When `true`, delays model loading until first request. Useful for large models (128M+) to reduce startup time |
+| `MODEL_UNLOAD_ENABLED` | false | When `true`, automatically unloads model from memory after idle timeout. Saves 92% RAM when idle but causes 2-3 min reload on next request |
+| `MODEL_UNLOAD_IDLE_TIMEOUT` | 1800 | Seconds of idle time before unloading model (only used if `MODEL_UNLOAD_ENABLED=true`) |
 | `AUTHENTICATION_ALLOWED_TOKENS` | - | Comma-separated tokens |
+
+### Memory Management Strategies
+
+**For Small Models (2M-32M):**
+- `LAZY_LOAD_MODEL=false` (fast startup)
+- `MODEL_UNLOAD_ENABLED=false` (keep in memory)
+
+**For Large Models (128M) - Development:**
+- `LAZY_LOAD_MODEL=true` (instant startup)
+- `MODEL_UNLOAD_ENABLED=true` (save memory when idle)
+
+**For Large Models (128M) - Production:**
+- `LAZY_LOAD_MODEL=false` (predictable startup)
+- `MODEL_UNLOAD_ENABLED=false` (consistent performance)
 
 ## Architecture
 
