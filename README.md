@@ -22,6 +22,8 @@ The Rust implementation is **1.7x faster**.
 
 ## Quick Start
 
+This application requires at least 1GB RAM to run.
+
 ### Docker (Recommended)
 
 ```bash
