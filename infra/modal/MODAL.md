@@ -5,6 +5,8 @@ This guide deploys the Rust API on Modal with a persistent Hugging Face cache to
 ## Files
 
 - `infra/modal/modal_deploy.py` - Modal app entrypoint
+- `infra/modal/Dockerfile` - Modal build (alpine + Python)
+- `infra/modal/docker-compose.yml` - Local build/run for Modal image
 - `infra/modal/setup_modal.sh` - Optional setup helper
 - `infra/modal/.env.modal.example` - Configuration template
 
@@ -60,7 +62,6 @@ Edit `infra/modal/.env.modal`.
 - `MODAL_MAX_CONTAINERS` (default `5`)
 - `MODAL_SCALEDOWN_WINDOW` (default `300` seconds)
 - `MODAL_IMAGE` (optional, e.g. `docker.io/owner/repo:tag`)
-- `MODAL_ADD_PYTHON` (default `3.11`, needed for distroless images)
 
 ### Cold start reduction
 
@@ -94,8 +95,9 @@ If you already publish a public image to Docker Hub, you can skip Modal’s buil
 
 ```bash
 MODAL_IMAGE=docker.io/tys203831/model2vec-rs-api-server:main-amd64
-MODAL_ADD_PYTHON=3.11
 ```
 
 This is faster for deploys (no build on Modal), but you still pay for image pull
 and model downloads. Modal requires `linux/amd64`, so use the `*-amd64` tag.
+The image must include Python for Modal’s runtime; the `infra/modal/Dockerfile`
+does this.

@@ -1,0 +1,17 @@
+services:
+  model2vec-modal:
+    build:
+      context: ../..
+      dockerfile: infra/modal/Dockerfile
+    image: model2vec-rs-api-server:modal
+    container_name: model2vec-modal
+    environment:
+      - MODEL_NAME=${MODEL_NAME:-minishlab/potion-base-8M}
+      - ALIAS_MODEL_NAME=${ALIAS_MODEL_NAME:-}
+      - PORT=${PORT:-8080}
+      - RUST_LOG=${RUST_LOG:-info}
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
+    volumes:
+      - ./hf-cache:/data/hf
+    restart: unless-stopped

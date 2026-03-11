@@ -31,6 +31,9 @@ WORKDIR /app
 COPY --from=builder /app/model2vec-api /app/model2vec-api
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
+# Modal requires Python in the image for the app runtime
+RUN apk add --no-cache python3
+
 # Set environment
 ENV MODEL_NAME=minishlab/potion-base-8M
 ENV ALIAS_MODEL_NAME=minishlab-potion-base-8M

@@ -110,7 +110,7 @@ MODEL_NAME=minishlab/potion-base-32M docker compose build
 
 There are two Dockerfiles:
 - `Dockerfile`: distroless runtime (smaller, more secure, default)
-- `Dockerfile.debug`: alpine runtime (debug-friendly)
+- `infra/modal/Dockerfile`: alpine runtime with Python (Modal-friendly)
 
 Both download the model at runtime. To reduce repeated download time, mount a persistent Hugging Face cache volume (see docker-compose.dev.yml).
 

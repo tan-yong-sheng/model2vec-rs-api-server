@@ -85,7 +85,7 @@ def build_image() -> modal.Image:
     image_ref = cfg("MODAL_IMAGE")
     if image_ref:
         return modal.Image.from_registry(image_ref)
-    return modal.Image.from_dockerfile(ROOT / "Dockerfile")
+    return modal.Image.from_dockerfile(ROOT / "infra" / "modal" / "Dockerfile")
 
 
 IMAGE = build_image()
