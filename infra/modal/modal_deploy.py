@@ -9,6 +9,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import asyncio
 import os
 import subprocess
 from pathlib import Path
@@ -139,11 +140,43 @@ def build_env() -> Dict[str, str]:
     env=build_env(),
 )
 @modal.web_server(port=int(cfg("PORT")))
-def serve() -> None:
+async def serve() -> None:
+    """
+    Async web server wrapper for Rust model2vec-api binary.
+
+    Uses async polling instead of blocking proc.wait() to prevent starving
+    Modal's heartbeat health check. The heartbeat needs CPU cycles to run;
+    blocking indefinitely causes Modal to kill the "unresponsive" container.
+
+    See: infra/modal/research/MODAL_SUBPROCESS_ANALYSIS.md (Section 4)
+    """
     env = os.environ.copy()
     env.update(build_env())
+
+    # Start the Rust binary process
     proc = subprocess.Popen(["/app/model2vec-api"], env=env)
-    proc.wait()
+
+    try:
+        # Poll for process completion without blocking the event loop.
+        # asyncio.sleep(0.5) yields control to Modal's event loop every 500ms,
+        # allowing the heartbeat thread to run and keep the container alive.
+        while proc.poll() is None:
+            await asyncio.sleep(0.5)
+
+        # Process exited. Check return code.
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"Rust server exited with code {proc.returncode}"
+            )
+    finally:
+        # Ensure process is cleaned up if we exit exceptionally
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
 
 
 @app.local_entrypoint()
