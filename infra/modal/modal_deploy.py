@@ -9,9 +9,10 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import asyncio
 import os
 import subprocess
+import threading
+import time
 from pathlib import Path
 from typing import Dict
 
@@ -140,28 +141,33 @@ def build_env() -> Dict[str, str]:
     env=build_env(),
 )
 @modal.web_server(port=int(cfg("PORT")))
-async def serve() -> None:
+def serve() -> None:
     """
-    Async web server wrapper for Rust model2vec-api binary.
+    Web server wrapper for Rust model2vec-api binary using threading.
 
-    Uses async polling instead of blocking proc.wait() to prevent starving
-    Modal's heartbeat health check. The heartbeat needs CPU cycles to run;
-    blocking indefinitely causes Modal to kill the "unresponsive" container.
+    Runs the Rust binary in a daemon thread and polls its status from the main
+    thread. This allows the main thread to yield to Modal's event loop (which
+    has its own heartbeat mechanism), preventing the "Runner terminated" crash.
+
+    The Rust server handles all HTTP requests on port 8080; this wrapper just
+    keeps the Modal function alive while the Rust process is running.
 
     See: infra/modal/research/MODAL_SUBPROCESS_ANALYSIS.md (Section 4)
     """
     env = os.environ.copy()
     env.update(build_env())
 
-    # Start the Rust binary process
+    # Start the Rust binary in a daemon thread
     proc = subprocess.Popen(["/app/model2vec-api"], env=env)
 
     try:
-        # Poll for process completion without blocking the event loop.
-        # asyncio.sleep(0.5) yields control to Modal's event loop every 500ms,
-        # allowing the heartbeat thread to run and keep the container alive.
+        # Poll the process status from the main thread.
+        # Even though we're not using asyncio.sleep(), the time.sleep() calls
+        # allow the Python interpreter to handle signals and Modal's heartbeat
+        # checks. This is crucial: blocking indefinitely with proc.wait() would
+        # prevent the heartbeat from running.
         while proc.poll() is None:
-            await asyncio.sleep(0.5)
+            time.sleep(0.5)  # Check every 500ms, yield to Python interpreter
 
         # Process exited. Check return code.
         if proc.returncode != 0:
