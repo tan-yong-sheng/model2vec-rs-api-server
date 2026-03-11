@@ -1,8 +1,10 @@
 .env
+.env.modal
 .env.local
 target/
 models/
 .ona/
+__pycache__/
 
 ralph-loop.local.md
 python-codebase.txt
