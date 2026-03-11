@@ -1,9 +1,6 @@
 services:
   model2vec-modal:
-    build:
-      context: ../..
-      dockerfile: infra/modal/Dockerfile
-    image: model2vec-rs-api-server:modal
+    image: docker.io/tys203831/model2vec-rs-api-server:modal
     container_name: model2vec-modal
     environment:
       - MODEL_NAME=${MODEL_NAME:-minishlab/potion-base-8M}

@@ -23,5 +23,10 @@
   "alwaysThinkingEnabled": false,
   "autoUpdatesChannel": "latest",
   "skipDangerousModePermissionPrompt": true,
-  "teammateMode": "tmux"
+  "teammateMode": "tmux",
+  "permissions": {
+    "allow": [
+      "mcp__tavily__tavily_research"
+    ]
+  }
 }

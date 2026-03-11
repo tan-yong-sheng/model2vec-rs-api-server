@@ -154,11 +154,26 @@ def serve() -> None:
 
     See: infra/modal/research/MODAL_SUBPROCESS_ANALYSIS.md (Section 4)
     """
+    print("=" * 80)
+    print("🚀 serve() STARTED")
+    print("=" * 80)
+
     env = os.environ.copy()
     env.update(build_env())
 
+    print(f"📝 Environment variables set: {len(env)} total")
+    print(f"   PORT={env.get('PORT')}")
+    print(f"   MODEL_NAME={env.get('MODEL_NAME')}")
+    print(f"   LAZY_LOAD_MODEL={env.get('LAZY_LOAD_MODEL')}")
+    print(f"   RUST_LOG={env.get('RUST_LOG')}")
+
     # Start the Rust binary in a daemon thread
-    proc = subprocess.Popen(["/app/model2vec-api"], env=env)
+    print(f"\n🔨 Starting subprocess: /app/model2vec-api")
+    print(f"   Working directory: {os.getcwd()}")
+    print(f"   Binary exists: {os.path.exists('/app/model2vec-api')}")
+
+    proc = subprocess.Popen(["/app/model2vec-api"], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    print(f"✅ Subprocess started with PID: {proc.pid}")
 
     try:
         # Poll the process status from the main thread.
@@ -166,23 +181,48 @@ def serve() -> None:
         # allow the Python interpreter to handle signals and Modal's heartbeat
         # checks. This is crucial: blocking indefinitely with proc.wait() would
         # prevent the heartbeat from running.
+
+        tick = 0
         while proc.poll() is None:
+            tick += 1
+            if tick % 10 == 0:
+                print(f"⏱️  Polling... ({tick * 0.5}s elapsed, PID {proc.pid} still running)")
             time.sleep(0.5)  # Check every 500ms, yield to Python interpreter
 
         # Process exited. Check return code.
+        print(f"\n❌ Process exited with code: {proc.returncode}")
+
+        # Get any remaining output
+        try:
+            output, _ = proc.communicate(timeout=1)
+            if output:
+                print("Last output from Rust server:")
+                print(output)
+        except:
+            pass
+
         if proc.returncode != 0:
             raise RuntimeError(
                 f"Rust server exited with code {proc.returncode}"
             )
+    except Exception as e:
+        print(f"💥 Exception in serve(): {e}")
+        raise
     finally:
+        print("\n🧹 Cleaning up...")
         # Ensure process is cleaned up if we exit exceptionally
         if proc.poll() is None:
+            print(f"   Sending SIGTERM to PID {proc.pid}")
             proc.terminate()
             try:
                 proc.wait(timeout=5)
+                print(f"   Process terminated gracefully")
             except subprocess.TimeoutExpired:
+                print(f"   SIGTERM timeout, sending SIGKILL")
                 proc.kill()
                 proc.wait()
+                print(f"   Process killed")
+        print("✅ serve() cleanup complete")
 
 
 @app.local_entrypoint()
