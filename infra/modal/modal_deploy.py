@@ -148,7 +148,7 @@ def serve() -> None:
     subprocess.run(["/app/model2vec-api"], env=env, check=True)
 
 
-@modal.local_entrypoint()
+@app.local_entrypoint()
 def main() -> None:
     print("Modal app file ready.")
     print("Deploy with:")
