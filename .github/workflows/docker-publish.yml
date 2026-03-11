@@ -91,6 +91,21 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Create amd64-only tags (Modal)
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          VERSION_TAG="${{ steps.meta.outputs.version }}"
+          SRC_GHCR="${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE_NAME }}@${{ steps.build.outputs.digest }}"
+          SRC_DH="${{ env.DOCKERHUB_REGISTRY }}/${{ env.DOCKERHUB_IMAGE_NAME }}@${{ steps.build.outputs.digest }}"
+
+          docker buildx imagetools create --tag "${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE_NAME }}:main-amd64" --filter=linux/amd64 "$SRC_GHCR"
+          docker buildx imagetools create --tag "${{ env.DOCKERHUB_REGISTRY }}/${{ env.DOCKERHUB_IMAGE_NAME }}:main-amd64" --filter=linux/amd64 "$SRC_DH"
+
+          if [ -n "$VERSION_TAG" ]; then
+            docker buildx imagetools create --tag "${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE_NAME }}:${VERSION_TAG}-amd64" --filter=linux/amd64 "$SRC_GHCR"
+            docker buildx imagetools create --tag "${{ env.DOCKERHUB_REGISTRY }}/${{ env.DOCKERHUB_IMAGE_NAME }}:${VERSION_TAG}-amd64" --filter=linux/amd64 "$SRC_DH"
+          fi
 
       - name: Show image digest
         run: |

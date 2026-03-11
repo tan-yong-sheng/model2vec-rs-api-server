@@ -22,6 +22,21 @@ cp infra/modal/.env.modal.example infra/modal/.env.modal
 ENV_FILE=infra/modal/.env.modal modal deploy infra/modal/modal_deploy.py
 ```
 
+## Authentication (Modal CLI)
+
+Modal reads credentials from `~/.modal.toml` or from shell env vars. The `ENV_FILE=...` file is only for app config and is not used for Modal auth.
+
+Recommended:
+```bash
+modal token new
+```
+
+Non-interactive (CI or headless):
+```bash
+export MODAL_TOKEN_ID=...
+export MODAL_TOKEN_SECRET=...
+```
+
 ## Why this setup
 
 - CPU-only containers by default
@@ -78,9 +93,9 @@ modal status
 If you already publish a public image to Docker Hub, you can skip Modal’s build step.
 
 ```bash
-MODAL_IMAGE=docker.io/tys203831/model2vec-rs-api-server:main
+MODAL_IMAGE=docker.io/tys203831/model2vec-rs-api-server:main-amd64
 MODAL_ADD_PYTHON=3.11
 ```
 
 This is faster for deploys (no build on Modal), but you still pay for image pull
-and model downloads. Modal’s “fast image pull” via eStargz supports Docker Hub.
+and model downloads. Modal requires `linux/amd64`, so use the `*-amd64` tag.
