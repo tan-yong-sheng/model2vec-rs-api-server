@@ -47,6 +47,7 @@ DEFAULTS = {
     "MODAL_CPU": "0.25",
     "MODAL_MEMORY_MB": "1024",
     "MODAL_TIMEOUT_SECS": "600",
+    "MODAL_STARTUP_TIMEOUT_SECS": "1200",
     "MODAL_MIN_CONTAINERS": "0",
     "MODAL_MAX_CONTAINERS": "5",
     "MODAL_SCALEDOWN_WINDOW": "300",
@@ -130,6 +131,7 @@ def build_env() -> Dict[str, str]:
     cpu=float(cfg("MODAL_CPU")),
     memory=int(cfg("MODAL_MEMORY_MB")),
     timeout=int(cfg("MODAL_TIMEOUT_SECS")),
+    startup_timeout=int(cfg("MODAL_STARTUP_TIMEOUT_SECS")),
     min_containers=int(cfg("MODAL_MIN_CONTAINERS")),
     max_containers=int(cfg("MODAL_MAX_CONTAINERS")),
     scaledown_window=int(cfg("MODAL_SCALEDOWN_WINDOW")),
@@ -140,7 +142,8 @@ def build_env() -> Dict[str, str]:
 def serve() -> None:
     env = os.environ.copy()
     env.update(build_env())
-    subprocess.run(["/app/model2vec-api"], env=env, check=True)
+    proc = subprocess.Popen(["/app/model2vec-api"], env=env)
+    proc.wait()
 
 
 @app.local_entrypoint()
