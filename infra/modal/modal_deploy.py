@@ -54,8 +54,6 @@ DEFAULTS = {
     "MODAL_HF_CACHE_DIR": "/data/hf",
     # Optional: use existing registry image (e.g., ghcr.io/owner/repo:tag)
     "MODAL_IMAGE": "",
-    # Add Python runtime when base image lacks it (distroless)
-    "MODAL_ADD_PYTHON": "3.11",
 }
 
 
@@ -85,12 +83,9 @@ VOLUME_NAME = cfg("MODAL_VOLUME_NAME")
 
 def build_image() -> modal.Image:
     image_ref = cfg("MODAL_IMAGE")
-    add_python = cfg("MODAL_ADD_PYTHON")
-    add_python = add_python if add_python else None
-
     if image_ref:
-        return modal.Image.from_registry(image_ref, add_python=add_python)
-    return modal.Image.from_dockerfile(ROOT / "Dockerfile", add_python=add_python)
+        return modal.Image.from_registry(image_ref)
+    return modal.Image.from_dockerfile(ROOT / "Dockerfile")
 
 
 IMAGE = build_image()
