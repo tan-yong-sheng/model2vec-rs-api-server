@@ -1,6 +1,6 @@
 services:
   model2vec:
-    image: ghcr.io/tys203831/model2vec-rs-api-server:main
+    image: docker.io/tys203831/model2vec-rs-api-server:main
     container_name: model2vec-rs
     environment:
       - MODEL_NAME=${MODEL_NAME:-minishlab/potion-base-8M}
@@ -10,16 +10,4 @@ services:
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
     restart: unless-stopped
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "-q",
-          "--spider",
-          "http://localhost:8080/.well-known/ready",
-        ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+    # Distroless image has no shell or curl/wget, so avoid in-container healthcheck
