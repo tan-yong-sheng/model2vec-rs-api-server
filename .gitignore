@@ -1,6 +1,8 @@
 .env
+.env.local
 target/
 models/
+.ona/
 
 ralph-loop.local.md
 python-codebase.txt

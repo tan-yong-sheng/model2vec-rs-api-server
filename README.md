@@ -100,7 +100,7 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/.well-known/live
 
 # Readiness
 curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/.well-known/ready
-# Returns: 204
+# Returns: 204 when model is loaded, 503 otherwise
 ```
 
 ## Configuration
@@ -115,6 +115,21 @@ LAZY_LOAD_MODEL=false
 MODEL_UNLOAD_ENABLED=false
 MODEL_UNLOAD_IDLE_TIMEOUT=1800
 AUTHENTICATION_ALLOWED_TOKENS=token1,token2
+REQUEST_TIMEOUT_SECS=30
+REQUEST_BODY_LIMIT_BYTES=2000000
+MAX_INPUT_ITEMS=512
+MAX_INPUT_CHARS=8192
+MAX_TOTAL_CHARS=200000
+CONCURRENCY_LIMIT=64
+MODEL_LOAD_MAX_RETRIES=5
+MODEL_LOAD_RETRY_BASE_MS=200
+MODEL_LOAD_RETRY_MAX_MS=5000
+MODEL_LOAD_TIMEOUT_SECS=120
+INFERENCE_MAX_RETRIES=2
+INFERENCE_RETRY_BASE_MS=50
+INFERENCE_RETRY_MAX_MS=500
+EMBEDDING_CACHE_MAX_ENTRIES=1024
+EMBEDDING_CACHE_TTL_SECS=600
 ```
 
 | Variable | Default | Description |
@@ -126,6 +141,21 @@ AUTHENTICATION_ALLOWED_TOKENS=token1,token2
 | `MODEL_UNLOAD_ENABLED` | false | When `true`, automatically unloads model from memory after idle timeout. Saves 92% RAM when idle but causes 2-3 min reload on next request |
 | `MODEL_UNLOAD_IDLE_TIMEOUT` | 1800 | Seconds of idle time before unloading model (only used if `MODEL_UNLOAD_ENABLED=true`) |
 | `AUTHENTICATION_ALLOWED_TOKENS` | - | Comma-separated tokens |
+| `REQUEST_TIMEOUT_SECS` | 30 | Request timeout in seconds (also bounds inference time) |
+| `REQUEST_BODY_LIMIT_BYTES` | 2000000 | Max request body size in bytes |
+| `MAX_INPUT_ITEMS` | 512 | Max number of inputs per request |
+| `MAX_INPUT_CHARS` | 8192 | Max characters per input string |
+| `MAX_TOTAL_CHARS` | 200000 | Max total characters across all inputs |
+| `CONCURRENCY_LIMIT` | 64 | Max in-flight requests |
+| `MODEL_LOAD_MAX_RETRIES` | 5 | Retries for model load failures |
+| `MODEL_LOAD_RETRY_BASE_MS` | 200 | Base backoff for model load retries (ms) |
+| `MODEL_LOAD_RETRY_MAX_MS` | 5000 | Max backoff for model load retries (ms) |
+| `MODEL_LOAD_TIMEOUT_SECS` | 120 | Timeout for model load (seconds) |
+| `INFERENCE_MAX_RETRIES` | 2 | Retries for inference failures/timeouts |
+| `INFERENCE_RETRY_BASE_MS` | 50 | Base backoff for inference retries (ms) |
+| `INFERENCE_RETRY_MAX_MS` | 500 | Max backoff for inference retries (ms) |
+| `EMBEDDING_CACHE_MAX_ENTRIES` | 1024 | Max cached embeddings |
+| `EMBEDDING_CACHE_TTL_SECS` | 600 | Cache TTL in seconds |
 
 ### Memory Management Strategies
 

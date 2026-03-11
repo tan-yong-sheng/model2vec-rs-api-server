@@ -1,6 +1,6 @@
 services:
   model2vec:
-    image: tys203831/model2vec-rs-api-server:main
+    image: ghcr.io/tys203831/model2vec-rs-api-server:main
     container_name: model2vec-rs
     environment:
       - MODEL_NAME=${MODEL_NAME:-minishlab/potion-base-8M}

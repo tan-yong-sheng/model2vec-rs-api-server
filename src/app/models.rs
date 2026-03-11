@@ -9,6 +9,7 @@ pub struct EmbeddingRequest {
     pub input: InputType,
 
     /// The model ID to use
+    #[validate(length(min = 1, message = "model must not be empty"))]
     pub model: String,
 
     /// Optional encoding format: "float" or "base64"
@@ -17,6 +18,7 @@ pub struct EmbeddingRequest {
 
     /// Optional dimensions to truncate to
     #[serde(default)]
+    #[validate(range(min = 1, message = "dimensions must be positive"))]
     pub dimensions: Option<usize>,
 
     /// Optional additional configuration
@@ -100,7 +102,7 @@ pub struct EmbeddingObject {
     pub object: String,
     pub index: usize,
     #[serde(serialize_with = "serialize_embedding")]
-    pub embedding: Vec<f32>,
+    pub embedding: EmbeddingValue,
 }
 
 /// Usage statistics
@@ -143,11 +145,73 @@ pub struct ModelMetadata {
 /// Error response
 #[derive(Debug, Clone, Serialize)]
 pub struct ErrorResponse {
-    pub error: String,
+    pub error: ErrorBody,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ErrorBody {
+    pub message: String,
+    #[serde(rename = "type")]
+    pub error_type: String,
+    pub param: Option<String>,
+    pub code: Option<String>,
+}
+
+impl ErrorResponse {
+    pub fn invalid_request(message: impl Into<String>, param: Option<&str>) -> Self {
+        Self {
+            error: ErrorBody {
+                message: message.into(),
+                error_type: "invalid_request_error".to_string(),
+                param: param.map(|p| p.to_string()),
+                code: None,
+            },
+        }
+    }
+
+    pub fn unauthorized(message: impl Into<String>) -> Self {
+        Self {
+            error: ErrorBody {
+                message: message.into(),
+                error_type: "authentication_error".to_string(),
+                param: None,
+                code: None,
+            },
+        }
+    }
+
+    pub fn server_error(message: impl Into<String>) -> Self {
+        Self {
+            error: ErrorBody {
+                message: message.into(),
+                error_type: "server_error".to_string(),
+                param: None,
+                code: None,
+            },
+        }
+    }
+
+    pub fn rate_limited(message: impl Into<String>) -> Self {
+        Self {
+            error: ErrorBody {
+                message: message.into(),
+                error_type: "rate_limit_error".to_string(),
+                param: None,
+                code: None,
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(untagged)]
+pub enum EmbeddingValue {
+    Float(Vec<f32>),
+    Base64(String),
 }
 
 // Custom serializer to handle both f32 and base64 encoding
-fn serialize_embedding<S>(embedding: &[f32], serializer: S) -> Result<S::Ok, S::Error>
+fn serialize_embedding<S>(embedding: &EmbeddingValue, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
 {

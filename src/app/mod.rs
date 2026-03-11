@@ -3,7 +3,12 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use tokio::sync::RwLock;
 
-use crate::{config::Config, vectorizer::Model2VecVectorizer};
+use anyhow::Result;
+
+use crate::{
+    config::Config,
+    vectorizer::{CacheSettings, InferenceSettings, LoadSettings, Model2VecVectorizer},
+};
 
 pub mod models;
 pub mod routes;
@@ -21,7 +26,7 @@ static VECTORIZER: RwLock<Option<Arc<Model2VecVectorizer>>> = RwLock::const_new(
 
 impl AppState {
     /// Create new application state
-    pub async fn new() -> Self {
+    pub async fn new() -> Result<Self> {
         let config = Arc::new(Config::from_env());
         // Initialize timestamp to 0 if lazy loading, otherwise current time
         let initial_timestamp = if config.lazy_load_model {
@@ -38,7 +43,7 @@ impl AppState {
         } else {
             tracing::info!("Eager loading model at startup: {}", config.model_name);
             let start = std::time::Instant::now();
-            let vec = Self::load_model(&config.model_name).await;
+            let vec = Self::load_model(&config).await?;
             let elapsed = start.elapsed();
             tracing::info!("Model loaded in {:.2}s", elapsed.as_secs_f64());
             Arc::new(RwLock::new(Some(vec)))
@@ -59,7 +64,7 @@ impl AppState {
             state.clone().start_idle_monitor();
         }
 
-        state
+        Ok(state)
     }
 
     /// Get current timestamp in seconds
@@ -71,12 +76,12 @@ impl AppState {
     }
 
     /// Load the model
-    async fn load_model(model_name: &str) -> Arc<Model2VecVectorizer> {
+    async fn load_model(config: &Config) -> Result<Arc<Model2VecVectorizer>> {
         // Check static cache first
         {
             let guard = VECTORIZER.read().await;
             if let Some(vec) = guard.as_ref() {
-                return vec.clone();
+                return Ok(vec.clone());
             }
         }
 
@@ -85,23 +90,30 @@ impl AppState {
         
         // Double-check after acquiring write lock (another task may have loaded it)
         if let Some(vec) = guard.as_ref() {
-            return vec.clone();
+            return Ok(vec.clone());
         }
 
+        let load_settings = Self::load_settings(config);
+        let inference_settings = Self::inference_settings(config);
+        let cache_settings = Self::cache_settings(config);
         let vec = Arc::new(
-            Model2VecVectorizer::new(model_name)
-                .await
-                .expect("Failed to load model"),
+            Model2VecVectorizer::new(
+                &config.model_name,
+                load_settings,
+                inference_settings,
+                cache_settings,
+            )
+            .await?,
         );
 
         // Store in static cache
         *guard = Some(vec.clone());
         
-        vec
+        Ok(vec)
     }
 
     /// Get or initialize the vectorizer (supports lazy loading)
-    pub async fn get_vectorizer(&self) -> Arc<Model2VecVectorizer> {
+    pub async fn get_vectorizer(&self) -> Result<Arc<Model2VecVectorizer>> {
         // Update last request time
         self.last_request_time.store(Self::current_timestamp(), Ordering::Relaxed);
 
@@ -109,14 +121,14 @@ impl AppState {
         {
             let guard = self.vectorizer.read().await;
             if let Some(vec) = guard.as_ref() {
-                return vec.clone();
+                return Ok(vec.clone());
             }
         }
 
         // Lazy load the model on first use
         tracing::info!("Loading model on demand: {}", self.config.model_name);
         let start = std::time::Instant::now();
-        let vec = Self::load_model(&self.config.model_name).await;
+        let vec = Self::load_model(&self.config).await?;
         let elapsed = start.elapsed();
         tracing::info!("Model loaded on demand in {:.2}s", elapsed.as_secs_f64());
 
@@ -129,7 +141,7 @@ impl AppState {
             }
         }
 
-        vec
+        Ok(vec)
     }
 
     /// Unload the vectorizer to free memory
@@ -188,5 +200,42 @@ impl AppState {
                 }
             }
         });
+    }
+
+    pub async fn is_ready(&self) -> bool {
+        {
+            let guard = self.vectorizer.read().await;
+            if guard.is_some() {
+                return true;
+            }
+        }
+
+        let guard = VECTORIZER.read().await;
+        guard.is_some()
+    }
+
+    fn load_settings(config: &Config) -> LoadSettings {
+        LoadSettings {
+            max_retries: config.model_load_max_retries,
+            retry_base: std::time::Duration::from_millis(config.model_load_retry_base_ms),
+            retry_max: std::time::Duration::from_millis(config.model_load_retry_max_ms),
+            timeout: std::time::Duration::from_secs(config.model_load_timeout_secs),
+        }
+    }
+
+    fn inference_settings(config: &Config) -> InferenceSettings {
+        InferenceSettings {
+            max_retries: config.inference_max_retries,
+            retry_base: std::time::Duration::from_millis(config.inference_retry_base_ms),
+            retry_max: std::time::Duration::from_millis(config.inference_retry_max_ms),
+            timeout: std::time::Duration::from_secs(config.request_timeout_secs),
+        }
+    }
+
+    fn cache_settings(config: &Config) -> CacheSettings {
+        CacheSettings {
+            max_entries: config.embedding_cache_max_entries,
+            ttl: std::time::Duration::from_secs(config.embedding_cache_ttl_secs),
+        }
     }
 }

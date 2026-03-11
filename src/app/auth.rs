@@ -2,11 +2,13 @@ use axum::{
     body::Body,
     http::{Request, StatusCode},
     middleware::{Next},
-    response::Response,
+    response::{IntoResponse, Response},
+    Json,
 };
 use std::sync::Arc;
 
 use crate::config::Config;
+use crate::app::models::ErrorResponse;
 
 /// Authentication state
 #[derive(Clone)]
@@ -42,7 +44,7 @@ pub async fn auth_middleware(
     auth_state: AuthState,
     request: Request<Body>,
     next: Next,
-) -> Result<Response, StatusCode> {
+) -> Result<Response, Response> {
     // If auth is not enabled, allow all requests
     if !auth_state.is_auth_enabled() {
         return Ok(next.run(request).await);
@@ -58,6 +60,17 @@ pub async fn auth_middleware(
 
     match token {
         Some(t) if auth_state.is_valid_token(t) => Ok(next.run(request).await),
-        _ => Err(StatusCode::UNAUTHORIZED),
+        _ => {
+            let mut response = (
+                StatusCode::UNAUTHORIZED,
+                Json(ErrorResponse::unauthorized("Invalid or missing authentication token")),
+            )
+                .into_response();
+            response.headers_mut().insert(
+                "WWW-Authenticate",
+                "Bearer".parse().expect("valid header value"),
+            );
+            Err(response)
+        }
     }
 }
