@@ -129,7 +129,7 @@ def build_env() -> Dict[str, str]:
     return {k: v for k, v in env.items() if v != ""}
 
 
-@app.cls(
+@app.function(
     image=IMAGE,
     cpu=float(cfg("MODAL_CPU")),
     memory=int(cfg("MODAL_MEMORY_MB")),
@@ -141,152 +141,76 @@ def build_env() -> Dict[str, str]:
     volumes={HF_CACHE_DIR: hf_volume},
     env=build_env(),
 )
-class ModelAPI:
+@modal.web_server(port=int(cfg("PORT")))
+def serve() -> None:
     """
-    Modal container class for Rust model2vec-api binary with lifecycle management.
+    Web server for Rust model2vec-api binary.
 
-    Uses Modal's lifecycle hooks pattern:
-    - @modal.enter() for startup (slow operations, model loading)
-    - @modal.web_server() for HTTP request handling
-    - @modal.exit() for graceful cleanup
+    This uses Modal's documented pattern for serving subprocess-based HTTP services.
+    The function starts the Rust binary and blocks indefinitely on it, allowing
+    Modal to route HTTP requests to port 8080 where the Rust server listens.
 
-    This pattern avoids blocking the event loop during startup because:
-    1. @modal.enter() runs in the startup_timeout window (1800s)
-    2. @modal.web_server() method can do synchronous polling without starving heartbeat
-    3. Separate concerns: init vs request handling
+    When the subprocess exits (shouldn't happen in normal operation), we raise
+    an exception to signal to Modal that the service is unhealthy.
 
-    See: infra/modal/research/MODAL_SUBPROCESS_ANALYSIS.md (Section 4)
+    Pattern reference: https://modal.com/docs/examples/llm_inference
     """
+    print("=" * 80)
+    print("🚀 serve() STARTED - Modal Web Server Pattern")
+    print("=" * 80)
 
-    process: subprocess.Popen = None
+    env = os.environ.copy()
+    env.update(build_env())
 
-    @modal.enter()
-    def startup(self):
-        """Called once per container at startup.
+    print(f"📝 Environment variables set: {len(env)} total")
+    print(f"   PORT={env.get('PORT')}")
+    print(f"   MODEL_NAME={env.get('MODEL_NAME')}")
+    print(f"   LAZY_LOAD_MODEL={env.get('LAZY_LOAD_MODEL')}")
+    print(f"   RUST_LOG={env.get('RUST_LOG')}")
 
-        This runs in the startup_timeout window, so slow operations like
-        model loading don't trigger heartbeat timeouts.
-        """
-        print("=" * 80)
-        print("🚀 @modal.enter() STARTUP")
-        print("=" * 80)
+    # Start the Rust binary
+    print(f"\n🔨 Starting subprocess: /app/model2vec-api")
+    print(f"   Working directory: {os.getcwd()}")
+    print(f"   Binary exists: {os.path.exists('/app/model2vec-api')}")
 
-        env = os.environ.copy()
-        env.update(build_env())
+    proc = subprocess.Popen(
+        ["/app/model2vec-api"],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    print(f"✅ Subprocess started with PID: {proc.pid}\n")
 
-        print(f"📝 Environment variables set: {len(env)} total")
-        print(f"   PORT={env.get('PORT')}")
-        print(f"   MODEL_NAME={env.get('MODEL_NAME')}")
-        print(f"   LAZY_LOAD_MODEL={env.get('LAZY_LOAD_MODEL')}")
-        print(f"   RUST_LOG={env.get('RUST_LOG')}")
+    try:
+        # Block on the subprocess. When it exits, we'll know the service is unhealthy.
+        # This is the standard Modal pattern for subprocess-based HTTP services.
+        returncode = proc.wait()
 
-        # Start the Rust binary
-        print(f"\n🔨 Starting subprocess: /app/model2vec-api")
-        print(f"   Working directory: {os.getcwd()}")
-        print(f"   Binary exists: {os.path.exists('/app/model2vec-api')}")
+        # If we reach here, the subprocess exited
+        print(f"\n❌ Subprocess exited with code: {returncode}")
 
-        self.process = subprocess.Popen(
-            ["/app/model2vec-api"],
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-        )
-        print(f"✅ Subprocess started with PID: {self.process.pid}")
-
-        # Wait for server to be ready (check if port 8080 is listening)
-        import socket
-
-        port = int(cfg("PORT"))
-        print(f"\n⏳ Waiting for server to listen on port {port}...")
-
-        for attempt in range(60):  # 60 second timeout
-            try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                result = sock.connect_ex(('localhost', port))
-                sock.close()
-
-                if result == 0:
-                    print(f"✅ Server is listening on port {port} (attempt {attempt + 1})")
-                    return
-
-            except Exception as e:
-                print(f"   Attempt {attempt + 1}: Server not ready yet ({e})")
-
-            time.sleep(1)
-
-        # If we get here, server didn't start listening
-        if self.process.poll() is not None:
-            # Process crashed
+        if returncode != 0:
             raise RuntimeError(
-                f"Rust server exited with code {self.process.returncode} before listening"
-            )
-        else:
-            # Process is running but not listening
-            raise RuntimeError(
-                f"Rust server did not start listening on port {port} within 60 seconds"
+                f"Rust server exited with code {returncode}"
             )
 
-    @modal.web_server(port=int(cfg("PORT")))
-    def serve(self):
-        """HTTP request handler.
+    except Exception as e:
+        print(f"💥 Exception in serve(): {e}")
+        raise
 
-        Modal routes HTTP requests directly to port 8080 where the Rust server
-        listens. This method's job is to keep the container alive and monitor
-        the subprocess.
-
-        Using synchronous time.sleep() here is fine because we're in the
-        @modal.web_server() context, not the startup context. Modal's request
-        router is separate from this polling loop.
-        """
-        print("=" * 80)
-        print("🚀 @modal.web_server() STARTED")
-        print("=" * 80)
-
-        try:
-            # Keep the container alive by monitoring the subprocess.
-            # If the subprocess crashes, we exit and container respawns.
-            tick = 0
-            while True:
-                # Check if subprocess is still running
-                if self.process.poll() is not None:
-                    print(f"\n❌ Process exited with code: {self.process.returncode}")
-                    raise RuntimeError(
-                        f"Rust server exited with code {self.process.returncode}"
-                    )
-
-                tick += 1
-                if tick % 120 == 0:  # Log every 60 seconds (120 * 0.5s)
-                    print(f"⏱️  Server alive... ({tick * 0.5}s elapsed, PID {self.process.pid})")
-
-                time.sleep(0.5)
-
-        except Exception as e:
-            print(f"💥 Exception in serve(): {e}")
-            raise
-
-    @modal.exit()
-    def shutdown(self):
-        """Called once per container at exit (graceful shutdown).
-
-        Terminates the Rust process cleanly.
-        """
-        print("\n🧹 @modal.exit() SHUTDOWN")
-
-        if self.process and self.process.poll() is None:
-            print(f"   Sending SIGTERM to PID {self.process.pid}")
-            self.process.terminate()
-
+    finally:
+        print("\n🧹 Cleanup")
+        if proc.poll() is None:
+            print(f"   Terminating PID {proc.pid}")
+            proc.terminate()
             try:
-                self.process.wait(timeout=30)
-                print(f"   Process terminated gracefully")
+                proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                print(f"   SIGTERM timeout, sending SIGKILL")
-                self.process.kill()
-                self.process.wait()
-                print(f"   Process killed")
-
-        print("✅ Cleanup complete")
+                print(f"   Force killing PID {proc.pid}")
+                proc.kill()
+                proc.wait()
+        print("✅ Done")
 
 
 @app.local_entrypoint()
