@@ -1,11 +1,8 @@
-mod app;
-mod vectorizer;
-mod config;
-
 use std::sync::Arc;
 use dotenvy::dotenv;
 use tracing_subscriber::fmt;
 use anyhow::Result;
+use model2vec_api::app;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -25,7 +22,7 @@ async fn main() -> Result<()> {
     let host = "0.0.0.0";
     let port = app_state.config.port;
 
-    let listener = tokio::net::TcpListener::bind(format!("{}:{}", host, port))
+    let listener = tokio::net::TcpListener::bind(format!("{host}:{port}"))
         .await?;
 
     tracing::info!("Server listening on {}:{}", host, port);

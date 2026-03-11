@@ -7,7 +7,7 @@ use anyhow::Result;
 
 use crate::{
     config::Config,
-    vectorizer::{CacheSettings, InferenceSettings, LoadSettings, Model2VecVectorizer},
+    vectorizer::{CacheSettings, InferenceSettings, LoadSettings, Model2VecVectorizer, Vectorizer},
 };
 
 pub mod models;
@@ -18,11 +18,11 @@ pub mod auth;
 #[derive(Clone)]
 pub struct AppState {
     pub config: Arc<Config>,
-    vectorizer: Arc<RwLock<Option<Arc<Model2VecVectorizer>>>>,
+    vectorizer: Arc<RwLock<Option<Arc<dyn Vectorizer>>>>,
     last_request_time: Arc<AtomicU64>,
 }
 
-static VECTORIZER: RwLock<Option<Arc<Model2VecVectorizer>>> = RwLock::const_new(None);
+static VECTORIZER: RwLock<Option<Arc<dyn Vectorizer>>> = RwLock::const_new(None);
 
 impl AppState {
     /// Create new application state
@@ -76,7 +76,7 @@ impl AppState {
     }
 
     /// Load the model
-    async fn load_model(config: &Config) -> Result<Arc<Model2VecVectorizer>> {
+    async fn load_model(config: &Config) -> Result<Arc<dyn Vectorizer>> {
         // Check static cache first
         {
             let guard = VECTORIZER.read().await;
@@ -96,7 +96,7 @@ impl AppState {
         let load_settings = Self::load_settings(config);
         let inference_settings = Self::inference_settings(config);
         let cache_settings = Self::cache_settings(config);
-        let vec = Arc::new(
+        let vec: Arc<dyn Vectorizer> = Arc::new(
             Model2VecVectorizer::new(
                 &config.model_name,
                 load_settings,
@@ -113,7 +113,7 @@ impl AppState {
     }
 
     /// Get or initialize the vectorizer (supports lazy loading)
-    pub async fn get_vectorizer(&self) -> Result<Arc<Model2VecVectorizer>> {
+    pub async fn get_vectorizer(&self) -> Result<Arc<dyn Vectorizer>> {
         // Update last request time
         self.last_request_time.store(Self::current_timestamp(), Ordering::Relaxed);
 
@@ -169,7 +169,7 @@ impl AppState {
     fn start_idle_monitor(self) {
         // Calculate check interval: max(timeout / 10, 10 seconds)
         let check_interval = std::cmp::max(
-            (self.config.model_unload_idle_timeout + 9) / 10,  // Round up division
+            self.config.model_unload_idle_timeout.div_ceil(10),
             10
         );
         
@@ -236,6 +236,15 @@ impl AppState {
         CacheSettings {
             max_entries: config.embedding_cache_max_entries,
             ttl: std::time::Duration::from_secs(config.embedding_cache_ttl_secs),
+        }
+    }
+
+    pub fn new_with_vectorizer(config: Config, vectorizer: Arc<dyn Vectorizer>) -> Self {
+        let now = Self::current_timestamp();
+        Self {
+            config: Arc::new(config),
+            vectorizer: Arc::new(RwLock::new(Some(vectorizer))),
+            last_request_time: Arc::new(AtomicU64::new(now)),
         }
     }
 }

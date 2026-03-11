@@ -39,6 +39,7 @@ tracing-subscriber = "0.3"
 # Anyhow for error handling
 anyhow = "1.0"
 
+
 [profile.release]
 lto = true
 opt-level = 3

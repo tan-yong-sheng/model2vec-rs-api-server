@@ -5,6 +5,7 @@ use std::cmp::Eq;
 use std::hash::Hash;
 use std::sync::Arc;
 use std::time::Duration;
+use async_trait::async_trait;
 use tokio::task::spawn_blocking;
 use tokio::time::timeout;
 
@@ -44,6 +45,11 @@ impl TextInput {
             TextInput::Multiple(v) => v.len(),
         }
     }
+
+    #[allow(dead_code)]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 impl From<&str> for TextInput {
@@ -70,6 +76,11 @@ pub struct Model2VecVectorizer {
     model: Arc<StaticModel>,
     cache: Cache<VectorizeCacheKey, Vec<f32>>,
     inference: InferenceSettings,
+}
+
+#[async_trait]
+pub trait Vectorizer: Send + Sync {
+    async fn vectorize(&self, input: &TextInput) -> Result<Vec<Vec<f32>>>;
 }
 
 impl Model2VecVectorizer {
@@ -148,7 +159,7 @@ impl Model2VecVectorizer {
             match result {
                 Ok(Ok(embeddings)) => return Ok(embeddings),
                 Ok(Err(err)) => {
-                    let err = anyhow!("inference task failed: {}", err);
+                    let err = anyhow!("inference task failed: {err}");
                     if attempt >= self.inference.max_retries {
                         return Err(err);
                     }
@@ -168,6 +179,13 @@ impl Model2VecVectorizer {
             delay = std::cmp::min(delay.saturating_mul(2), self.inference.retry_max);
             attempt += 1;
         }
+    }
+}
+
+#[async_trait]
+impl Vectorizer for Model2VecVectorizer {
+    async fn vectorize(&self, input: &TextInput) -> Result<Vec<Vec<f32>>> {
+        Model2VecVectorizer::vectorize(self, input).await
     }
 }
 
@@ -212,13 +230,13 @@ async fn load_model_with_retry(model_name: &str, settings: &LoadSettings) -> Res
         match result {
             Ok(Ok(Ok(model))) => return Ok(Arc::new(model)),
             Ok(Ok(Err(err))) => {
-                let err = anyhow!("model load failed: {}", err);
+                let err = anyhow!("model load failed: {err}");
                 if attempt >= settings.max_retries {
                     return Err(err);
                 }
             }
             Ok(Err(err)) => {
-                let err = anyhow!("model load task failed: {}", err);
+                let err = anyhow!("model load task failed: {err}");
                 if attempt >= settings.max_retries {
                     return Err(err);
                 }

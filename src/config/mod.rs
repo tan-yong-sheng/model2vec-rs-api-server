@@ -149,3 +149,68 @@ impl Config {
         self.allowed_tokens.iter().any(|t| t == token)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    fn with_env_lock<F: FnOnce()>(f: F) {
+        let _guard = ENV_LOCK.lock().expect("env lock");
+        f();
+    }
+
+    #[test]
+    fn defaults_when_env_missing() {
+        with_env_lock(|| {
+            for key in [
+                "MODEL_NAME",
+                "ALIAS_MODEL_NAME",
+                "AUTHENTICATION_ALLOWED_TOKENS",
+                "PORT",
+                "LAZY_LOAD_MODEL",
+                "MODEL_UNLOAD_ENABLED",
+                "MODEL_UNLOAD_IDLE_TIMEOUT",
+                "REQUEST_TIMEOUT_SECS",
+                "REQUEST_BODY_LIMIT_BYTES",
+                "MAX_INPUT_ITEMS",
+                "MAX_INPUT_CHARS",
+                "MAX_TOTAL_CHARS",
+                "CONCURRENCY_LIMIT",
+                "MODEL_LOAD_MAX_RETRIES",
+                "MODEL_LOAD_RETRY_BASE_MS",
+                "MODEL_LOAD_RETRY_MAX_MS",
+                "MODEL_LOAD_TIMEOUT_SECS",
+                "INFERENCE_MAX_RETRIES",
+                "INFERENCE_RETRY_BASE_MS",
+                "INFERENCE_RETRY_MAX_MS",
+                "EMBEDDING_CACHE_MAX_ENTRIES",
+                "EMBEDDING_CACHE_TTL_SECS",
+            ] {
+                std::env::remove_var(key);
+            }
+
+            let config = Config::from_env();
+            assert_eq!(config.model_name, "minishlab/potion-base-8M");
+            assert_eq!(config.port, 8080);
+            assert!(!config.is_auth_enabled());
+        });
+    }
+
+    #[test]
+    fn parses_tokens_and_port() {
+        with_env_lock(|| {
+            std::env::set_var("AUTHENTICATION_ALLOWED_TOKENS", "a, b, c");
+            std::env::set_var("PORT", "9090");
+
+            let config = Config::from_env();
+            assert!(config.is_auth_enabled());
+            assert_eq!(config.port, 9090);
+            assert!(config.is_valid_token("a"));
+            assert!(config.is_valid_token("b"));
+            assert!(!config.is_valid_token("d"));
+        });
+    }
+}

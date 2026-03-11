@@ -13,6 +13,7 @@ use axum::{
 };
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
+use serde_json::json;
 use std::sync::Arc;
 use std::time::Duration;
 use tower::limit::ConcurrencyLimitLayer;
@@ -45,6 +46,22 @@ impl IntoResponse for ApiResponse {
 /// Health check: live
 pub async fn live() -> impl IntoResponse {
     StatusCode::NO_CONTENT
+}
+
+/// Root endpoint (browser-friendly)
+pub async fn index(
+    State(state): State<Arc<crate::app::AppState>>,
+) -> impl IntoResponse {
+    Json(json!({
+        "service": "model2vec-api",
+        "status": if state.is_ready().await { "ready" } else { "starting" },
+        "endpoints": {
+            "live": "/.well-known/live",
+            "ready": "/.well-known/ready",
+            "models": "/v1/models",
+            "embeddings": "/v1/embeddings"
+        }
+    }))
 }
 
 /// Health check: ready
@@ -222,6 +239,7 @@ pub fn create_router(app_state: Arc<crate::app::AppState>) -> Router {
         ));
 
     let mut router = Router::new()
+        .route("/", get(index))
         // Health endpoints (no auth)
         .route("/.well-known/live", get(live))
         .route("/.well-known/ready", get(ready))
@@ -331,7 +349,7 @@ fn first_validation_error(errors: &validator::ValidationErrors) -> (Option<Strin
                 .message
                 .as_ref()
                 .map(|m| m.to_string())
-                .unwrap_or_else(|| format!("{} is invalid", field));
+                .unwrap_or_else(|| format!("{field} is invalid"));
             return (Some(field.to_string()), message);
         }
     }
@@ -390,4 +408,107 @@ async fn handle_middleware_error(err: BoxError) -> impl IntoResponse {
         StatusCode::INTERNAL_SERVER_ERROR,
         Json(ErrorResponse::server_error("Internal server error")),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+    use serde_json::json;
+
+    fn test_config() -> Config {
+        Config {
+            model_name: "minishlab/potion-base-8M".to_string(),
+            alias_model_name: None,
+            allowed_tokens: vec![],
+            port: 8080,
+            lazy_load_model: false,
+            model_unload_enabled: false,
+            model_unload_idle_timeout: 1800,
+            request_timeout_secs: 30,
+            request_body_limit_bytes: 2_000_000,
+            max_input_items: 2,
+            max_input_chars: 10,
+            max_total_chars: 20,
+            concurrency_limit: 64,
+            model_load_max_retries: 1,
+            model_load_retry_base_ms: 1,
+            model_load_retry_max_ms: 10,
+            model_load_timeout_secs: 1,
+            inference_max_retries: 1,
+            inference_retry_base_ms: 1,
+            inference_retry_max_ms: 10,
+            embedding_cache_max_entries: 10,
+            embedding_cache_ttl_secs: 60,
+        }
+    }
+
+    #[test]
+    fn input_metrics_single() {
+        let input = InputType::Single("abc".to_string());
+        let (count, max, total, has_empty) = input_metrics(&input);
+        assert_eq!(count, 1);
+        assert_eq!(max, 3);
+        assert_eq!(total, 3);
+        assert!(!has_empty);
+    }
+
+    #[test]
+    fn input_metrics_multiple() {
+        let input = InputType::Multiple(vec!["a".to_string(), "bb".to_string(), "".to_string()]);
+        let (count, max, total, has_empty) = input_metrics(&input);
+        assert_eq!(count, 3);
+        assert_eq!(max, 2);
+        assert_eq!(total, 3);
+        assert!(has_empty);
+    }
+
+    #[test]
+    fn validate_request_rejects_encoding_format() {
+        let mut request: EmbeddingRequest = serde_json::from_value(json!({
+            "input": "hello",
+            "model": "minishlab/potion-base-8M",
+            "encoding_format": "bad"
+        }))
+        .expect("valid request");
+        let config = test_config();
+        let err = validate_embedding_request(&request, &config).unwrap_err();
+        match err {
+            ApiResponse::Error(status, _) => assert_eq!(status, StatusCode::BAD_REQUEST),
+            _ => panic!("expected error response"),
+        }
+        request.encoding_format = "float".to_string();
+        assert!(validate_embedding_request(&request, &config).is_ok());
+    }
+
+    #[test]
+    fn validate_request_limits() {
+        let config = test_config();
+        let request: EmbeddingRequest = serde_json::from_value(json!({
+            "input": ["01234567890", "x"],
+            "model": "minishlab/potion-base-8M"
+        }))
+        .expect("valid request");
+        let err = validate_embedding_request(&request, &config).unwrap_err();
+        match err {
+            ApiResponse::Error(status, _) => assert_eq!(status, StatusCode::BAD_REQUEST),
+            _ => panic!("expected error response"),
+        }
+    }
+
+    #[test]
+    fn encode_embedding_base64_roundtrip() {
+        let emb = vec![1.0_f32, -2.0_f32];
+        let encoded = encode_embedding_base64(&emb);
+        let decoded = base64::engine::general_purpose::STANDARD
+            .decode(encoded)
+            .expect("decode");
+        let mut floats = Vec::new();
+        for chunk in decoded.chunks_exact(4) {
+            let mut arr = [0u8; 4];
+            arr.copy_from_slice(chunk);
+            floats.push(f32::from_le_bytes(arr));
+        }
+        assert_eq!(floats, emb);
+    }
 }

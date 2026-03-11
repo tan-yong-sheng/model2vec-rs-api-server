@@ -74,3 +74,32 @@ pub async fn auth_middleware(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extract_bearer_token_valid() {
+        let token = extract_bearer_token(Some("Bearer abc123"));
+        assert_eq!(token, Some("abc123"));
+    }
+
+    #[test]
+    fn extract_bearer_token_missing_prefix() {
+        let token = extract_bearer_token(Some("abc123"));
+        assert_eq!(token, None);
+    }
+
+    #[test]
+    fn extract_bearer_token_empty() {
+        let token = extract_bearer_token(Some("Bearer "));
+        assert_eq!(token, None);
+    }
+
+    #[test]
+    fn extract_bearer_token_none() {
+        let token = extract_bearer_token(None);
+        assert_eq!(token, None);
+    }
+}

@@ -43,7 +43,7 @@ where
         let mut strings = Vec::new();
         for (i, v) in arr.iter().enumerate() {
             let s = v.as_str().ok_or_else(|| {
-                serde::de::Error::custom(format!("expected string at array index {}", i))
+                serde::de::Error::custom(format!("expected string at array index {i}"))
             })?;
             strings.push(s.to_string());
         }
@@ -75,6 +75,11 @@ impl InputType {
             InputType::Single(_) => 1,
             InputType::Multiple(v) => v.len(),
         }
+    }
+
+    #[allow(dead_code)]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 
@@ -216,4 +221,78 @@ where
     S: serde::Serializer,
 {
     embedding.serialize(serializer)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn deserialize_input_single() {
+        let value = json!({
+            "input": "hello",
+            "model": "test-model"
+        });
+        let request: EmbeddingRequest = serde_json::from_value(value).expect("valid request");
+        match request.input {
+            InputType::Single(s) => assert_eq!(s, "hello"),
+            _ => panic!("expected single input"),
+        }
+        assert_eq!(request.encoding_format, "float");
+    }
+
+    #[test]
+    fn deserialize_input_multiple() {
+        let value = json!({
+            "input": ["a", "b"],
+            "model": "test-model"
+        });
+        let request: EmbeddingRequest = serde_json::from_value(value).expect("valid request");
+        match request.input {
+            InputType::Multiple(v) => assert_eq!(v, vec!["a".to_string(), "b".to_string()]),
+            _ => panic!("expected multiple input"),
+        }
+    }
+
+    #[test]
+    fn deserialize_input_invalid_array() {
+        let value = json!({
+            "input": ["ok", 1],
+            "model": "test-model"
+        });
+        let err = serde_json::from_value::<EmbeddingRequest>(value).unwrap_err();
+        assert!(err.to_string().contains("expected string"));
+    }
+
+    #[test]
+    fn input_type_to_text_input() {
+        let single = InputType::Single("hi".to_string()).to_text_input();
+        match single {
+            crate::vectorizer::TextInput::Single(s) => assert_eq!(s, "hi"),
+            _ => panic!("expected single"),
+        }
+
+        let multiple = InputType::Multiple(vec!["a".to_string(), "b".to_string()]).to_text_input();
+        match multiple {
+            crate::vectorizer::TextInput::Multiple(v) => assert_eq!(v, vec!["a".to_string(), "b".to_string()]),
+            _ => panic!("expected multiple"),
+        }
+    }
+
+    #[test]
+    fn error_response_builders() {
+        let err = ErrorResponse::invalid_request("bad", Some("input"));
+        assert_eq!(err.error.error_type, "invalid_request_error");
+        assert_eq!(err.error.param.as_deref(), Some("input"));
+
+        let err = ErrorResponse::unauthorized("nope");
+        assert_eq!(err.error.error_type, "authentication_error");
+
+        let err = ErrorResponse::server_error("oops");
+        assert_eq!(err.error.error_type, "server_error");
+
+        let err = ErrorResponse::rate_limited("slow down");
+        assert_eq!(err.error.error_type, "rate_limit_error");
+    }
 }
